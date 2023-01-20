@@ -1,3 +1,6 @@
+# Notice: Stable Horde worker has moved to a [new repo](https://github.com/db0/AI-Horde-Worker). Stable Horde worker is using v0.0.1 Nataili and will be updated soon:tm:
+
+
 # Nataili: Multimodal AI Python Library
 
 Nataili is a Python library that provides a set of tools to build multimodal AI applications. It provides a set of tools to build multimodal AI applications, including:
