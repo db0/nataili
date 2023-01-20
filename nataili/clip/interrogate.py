@@ -15,15 +15,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import math
-from typing import Dict, List, Tuple, Union
+import hashlib
+from typing import Dict, List, Union
 
 import numpy as np
 import torch
 from PIL import Image
 
 from nataili.cache import Cache
-from nataili.util import logger
+from nataili.util.logger import logger
 
 from .image import ImageEmbed
 from .text import TextEmbed
@@ -52,29 +52,30 @@ class Interrogator:
         """
         cached = True
         for text in text_array:
-            if text not in self.cache.kv:
+            if self.cache.get(file=text) is None:
                 cached = False
                 break
         if not cached:
-            # logger.info(f"Caching {key} embeds")
             text_embed = TextEmbed(self.model, self.cache)
             for text in text_array:
                 text_embed(text)
-            self.cache.flush()
         else:
             logger.debug(f"{key} embeds already cached")
         logger.debug(f"Loading {key} embeds")
         if individual:
             self.embed_lists[key] = {}
             for text in text_array:
+                text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
                 self.embed_lists[key][text] = torch.from_numpy(
-                    np.load(f"{self.cache.cache_dir}/{self.cache.kv[text]}.npy")
+                    np.load(f"{self.cache.cache_dir}/{text_hash}.npy")
                 ).float()
         else:
             with torch.no_grad():
                 text_features = torch.cat(
                     [
-                        torch.from_numpy(np.load(f"{self.cache.cache_dir}/{self.cache.kv[text]}.npy")).float()
+                        torch.from_numpy(
+                            np.load(f"{self.cache.cache_dir}/{hashlib.sha256(text.encode('utf-8')).hexdigest()}.npy")
+                        ).float()
                         for text in text_array
                     ],
                     dim=0,
@@ -170,7 +171,8 @@ class Interrogator:
 
     def __call__(
         self,
-        input_image: Image.Image,
+        filename: str,
+        directory: str = None,
         text_array: Union[List[str], Dict[str, List[str]], None] = None,
         similarity=False,
         rank=False,
@@ -197,9 +199,8 @@ class Interrogator:
         elif isinstance(text_array, dict):
             pass
         image_embed = ImageEmbed(self.model, self.cache_image)
-        image_hash = image_embed(input_image.convert("RGB"))
-        self.cache_image.flush()
-        image_embed_array = np.load(f"{self.cache_image.cache_dir}/{self.cache_image.kv[image_hash]}.npy")
+        image_hash = image_embed(filename, directory)
+        image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
         image_features = torch.from_numpy(image_embed_array).float().to(self.model["device"])
         if similarity and not rank:
             results = {}

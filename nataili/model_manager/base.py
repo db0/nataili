@@ -72,7 +72,9 @@ class BaseModelManager:
             logger.init("Model Reference", status="Downloading")
             response = requests.get(self.remote_db)
             logger.init_ok("Model Reference", status="OK")
-            return response.json()
+            models = response.json()
+            logger.debug(models)
+            return models
         except Exception as e:
             logger.init_err("Model Reference", status=f"Download failed: {e}")
             logger.init_warn("Model Reference", status="Local")

@@ -30,6 +30,9 @@ class GfpganModelManager(BaseModelManager):
         self.path = f"{Path.home()}/.cache/nataili/gfpgan"
         self.models_db_name = "gfpgan"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
+        self.remote_db = (
+            f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
+        )
         self.init()
 
     def load(

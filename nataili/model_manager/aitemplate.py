@@ -32,7 +32,11 @@ class AITemplateModelManager(BaseModelManager):
     def __init__(self):
         super().__init__()
         self.path = f"{Path.home()}/.cache/nataili/aitemplate"
-        self.models_path = self.pkg / "aitemplate.json"
+        self.models_db_name = "aitemplate"
+        self.models_path = self.pkg / f"{self.models_db_name}.json"
+        self.remote_db = (
+            f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
+        )
         self.ait_workdir = None
         self.init()
 

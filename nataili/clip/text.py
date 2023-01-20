@@ -15,14 +15,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from uuid import uuid4
+import hashlib
 
 import clip
 import numpy as np
 import torch
 
 from nataili.cache import Cache
-from nataili.util import autocast_cuda
+from nataili.util.cast import autocast_cuda
+from nataili.util.logger import logger
 
 
 class TextEmbed:
@@ -35,18 +36,19 @@ class TextEmbed:
         self.cache = cache
 
     @autocast_cuda
-    def __call__(self, text):
+    def __call__(self, text: str):
         """
         :param text: Text to embed
         If text is not in cache, embed it and save it to cache
         """
-        if text in self.cache.kv:
-            return
+        text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        cached = self.cache.get(file=text)
+        if cached:
+            return cached
         text_tokens = clip.tokenize([text]).cuda()
         with torch.no_grad():
             text_features = self.model["model"].encode_text(text_tokens).float()
         text_features /= text_features.norm(dim=-1, keepdim=True)
         text_embed_array = text_features.cpu().detach().numpy()
-        filename = str(uuid4())
-        np.save(f"{self.cache.cache_dir}/{filename}", text_embed_array)
-        self.cache.kv[text] = filename
+        np.save(f"{self.cache.cache_dir}/{text_hash}", text_embed_array)
+        self.cache.add_sqlite_row(text, text_hash, text_hash)

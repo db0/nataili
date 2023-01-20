@@ -1,15 +1,16 @@
-import glob
 import os
-from typing import List, Literal, Union
+from typing import Literal, Union
 
 import numpy as np
-import torch
 from PIL import Image
 
 from nataili.cache import Cache
-from nataili.clip import ImageEmbed, TextEmbed
-from nataili.model_manager import ClipModelManager
-from nataili.util import logger, normalized
+from nataili.model_manager.clip import ClipModelManager
+from nataili.util.logger import logger
+from nataili.util.normalized import normalized
+
+from ..image import ImageEmbed
+from ..text import TextEmbed
 
 
 class PredictorPrepare:
@@ -42,9 +43,9 @@ class PredictorPrepare:
         """
         self.model_name = model_name
         self.model_manager = ClipModelManager()
-        self.model_manager.load(self.model_name)
         self.cache_text = Cache(self.model_name, cache_parentname="embeds", cache_subname="text")
         self.cache_image = Cache(self.model_name, cache_parentname="embeds", cache_subname="image")
+        self.model_manager.load(self.model_name)
         self.text_embed = TextEmbed(self.model_manager.loaded_models[self.model_name], self.cache_text)
         self.image_embed = ImageEmbed(self.model_manager.loaded_models[self.model_name], self.cache_image)
         if rating_source == "directory":
@@ -57,16 +58,18 @@ class PredictorPrepare:
             raise NotImplementedError
         try:
             self.x = np.vstack(self.x)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Could not stack x: {e}")
             logger.error("Could not stack x")
             exit(1)
-        try:
-            self.y = np.vstack(self.y)
-        except Exception:
-            logger.error("Could not stack y")
-            exit(1)
         logger.info(f"Shape of x: {self.x.shape}")
-        logger.info(f"Shape of y: {self.y.shape}")
+        if not x_only:
+            try:
+                self.y = np.vstack(self.y)
+            except Exception:
+                logger.error("Could not stack y")
+                exit(1)
+            logger.info(f"Shape of y: {self.y.shape}")
         if not os.path.exists(output_directory):
             logger.info(f"Creating output directory: {output_directory}")
             os.makedirs(output_directory)
@@ -84,6 +87,35 @@ class PredictorPrepare:
                 logger.error(f"Could not save y to {output_directory}/y.npy")
                 exit(1)
 
+    def save(self, output_directory: str, x: np.ndarray, y: np.ndarray):
+        """
+        :param output_directory: Directory to write output to
+        """
+        if not os.path.exists(output_directory):
+            logger.info(f"Creating output directory: {output_directory}")
+            os.makedirs(output_directory)
+        logger.info(f"Saving x to {output_directory}/x.npy")
+        try:
+            np.save(f"{output_directory}/x.npy", x)
+        except Exception:
+            logger.error(f"Could not save x to {output_directory}/x.npy")
+            exit(1)
+        logger.info(f"Saving y to {output_directory}/y.npy")
+        try:
+            np.save(f"{output_directory}/y.npy", y)
+        except Exception:
+            logger.error(f"Could not save y to {output_directory}/y.npy")
+            exit(1)
+
+    def load(self, input_directory: str) -> np.ndarray:
+        """
+        :param input_directory: Directory to read input from
+        :return: x
+        """
+        x = np.load(f"{input_directory}/x.npy")
+        y = np.load(f"{input_directory}/y.npy")
+        return x, y
+
     def _x_only(self, input_directory: str):
         """
         :param input_directory: Directory to read input from
@@ -98,7 +130,9 @@ class PredictorPrepare:
                     return
                 self.x.append(normalized(image_features))
 
-    def _prepare_from_filename(self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
+    def _prepare_from_filename(
+        self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False
+    ):
         """
         :param input_directory: Directory to read input from
         """
@@ -112,11 +146,15 @@ class PredictorPrepare:
                 if os.path.exists(rating_file_path):
                     with open(rating_file_path, "r") as f:
                         rating = f.read()
-                        self._prepare_from_file(file_path=file_path, rating=rating, rating_type=rating_type, x_only=x_only)
+                        self._prepare_from_file(
+                            file_path=file_path, rating=rating, rating_type=rating_type, x_only=x_only
+                        )
                 else:
                     logger.warning(f"Could not find rating file {rating_file_path}")
 
-    def _prepare_from_directory(self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
+    def _prepare_from_directory(
+        self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False
+    ):
         """
         :param input_directory: Directory to read input from
         """
@@ -127,9 +165,13 @@ class PredictorPrepare:
                 for file in os.listdir(directory_path):
                     file_path = os.path.join(directory_path, file)
                     if os.path.isfile(file_path):
-                        self._prepare_from_file(file_path=file_path, rating=directory, rating_type=rating_type, x_only=x_only)
+                        self._prepare_from_file(
+                            file_path=file_path, rating=directory, rating_type=rating_type, x_only=x_only
+                        )
 
-    def _prepare_from_file(self, file_path: str, rating: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
+    def _prepare_from_file(
+        self, file_path: str, rating: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False
+    ):
         """
         :param file_path: Path to file to prepare
         :param rating: Rating to use for file
@@ -149,26 +191,26 @@ class PredictorPrepare:
             logger.info(f"Processing file: {file_path} with rating {rating}")
             self.y.append(self._y(rating))
 
-    def _image_features(self, image: Union[str, Image.Image]):
+    def _image_features(self, image: str):
         """
         Cache image features and return them as a numpy array
         :param image: Image to embed, either path or PIL.Image.Image
         :return: image embed as numpy array
         """
-        if isinstance(image, str):
-            if os.path.exists(image):
-                try:
-                    image = Image.open(image)
-                except Exception:
-                    logger.error(f"Could not open image {image}")
-                    return None
-            else:
-                logger.error(f"Could not find image {image}")
+        if os.path.exists(image):
+            cached = self.cache_image.get(file=os.path.basename(image))
+            if cached is not None:
+                return np.load(cached)
+            try:
+                image_hash = self.image_embed(os.path.basename(image), os.path.dirname(image))
+                image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
+                return image_embed_array
+            except Exception as e:
+                logger.error(f"Could not open image {image} with error {e}")
                 return None
-        image = image.convert("RGB")
-        image_hash = self.image_embed(image)
-        image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
-        return image_embed_array
+        else:
+            logger.error(f"Could not find image {image} in cache")
+            return None
 
     def _y(self, rating: Union[str, float]):
         """

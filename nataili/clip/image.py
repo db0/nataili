@@ -16,13 +16,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import hashlib
+import os
+
+# threading
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import numpy as np
 import torch
+from PIL import Image
 
 from nataili.cache import Cache
-from nataili.util import autocast_cuda, logger
+from nataili.util.cast import autocast_cuda
+from nataili.util.logger import logger
 
 
 class ImageEmbed:
@@ -33,76 +41,52 @@ class ImageEmbed:
         """
         self.model = model
         self.cache = cache
-
-    def save_batch(self, batch):
-        filenames = []
-        for image_embed_array in batch["image_features"]:
-            filename = str(uuid4())
-            np.save(f"{self.cache.cache_dir}/{filename}", image_embed_array.float().cpu().detach().numpy())
-            filenames.append(filename)
-        for image_hash, filename in zip(batch["image_hashes"], filenames):
-            self.cache.kv[image_hash] = filename
+        self.executor = ThreadPoolExecutor(max_workers=1024, thread_name_prefix="SaveThread")
 
     @autocast_cuda
-    def __call__(self, pil_image):
+    def _batch(self, pil_images):
+        for pil_image in pil_images:
+            pil_images[pil_image]["hash"] = hashlib.sha256(pil_images[pil_image]["pil_image"].tobytes()).hexdigest()
+        preprocess_images = []
+        with torch.no_grad():
+            for pil_image in pil_images:
+                preprocess_images.append(
+                    self.model["preprocess"](pil_images[pil_image]["pil_image"]).unsqueeze(0).to(self.model["device"])
+                )
+            preprocess_images = torch.cat(preprocess_images, dim=0)
+            image_features = self.model["model"].encode_image(preprocess_images)
+            for image_embed_array, pil_image in zip(image_features, pil_images):
+                future = self.executor.submit(self._save, image_embed_array, pil_images[pil_image])
+
+    def _save(self, image_embed_array, pil_image):
+        np.save(f"{self.cache.cache_dir}/{pil_image['hash']}", image_embed_array.float().cpu().detach().numpy())
+        self.cache.add_sqlite_row(
+            file=pil_image["filename"].replace(".webp", ""), pil_hash=pil_image["hash"], hash=None
+        )
+
+    @autocast_cuda
+    def __call__(self, filename: str, directory: str = None, skip_cache: bool = False):
         """
         :param pil_image: PIL image to embed
         SHA256 hash of image is used as key in cache
         If image is not in cache, embed it and save it to cache
         Returns SHA256 hash of image
         """
+        pil_image = Image.open(f"{directory}/{filename}").convert("RGB")
+        file_hash = hashlib.sha256(open(f"{directory}/{filename}", "rb").read()).hexdigest()
         image_hash = hashlib.sha256(pil_image.tobytes()).hexdigest()
-        if image_hash in self.cache.kv:
-            logger.debug(f"Image {image_hash} already in cache")
-            return image_hash
+        if not skip_cache:
+            cached = self.cache.get(pil_hash=image_hash)
+            if cached:
+                logger.debug(f"Image {image_hash} already in cache")
+                return image_hash
+        else:
+            logger.debug(f"Skipping cache for image {image_hash}")
         logger.debug(f"Embedding image {image_hash}")
         with torch.no_grad():
             preprocess_image = self.model["preprocess"](pil_image).unsqueeze(0).to(self.model["device"])
         image_features = self.model["model"].encode_image(preprocess_image).float()
         image_features /= image_features.norm(dim=-1, keepdim=True)
         image_embed_array = image_features.cpu().detach().numpy()
-        filename = str(uuid4())
-        np.save(f"{self.cache.cache_dir}/{filename}", image_embed_array)
-        self.cache.kv[image_hash] = filename
-        return image_hash
-
-    @autocast_cuda
-    def batch(self, pil_images, batch_size: int = 32):
-        """
-        :param pil_images: List of PIL images to embed
-        SHA256 hash of image is used as key in cache
-        If image is not in cache, embed it and save it to cache
-        Returns SHA256 hash of image
-        """
-        image_hashes = []
-        logger.debug("Generating hashes for images")
-        for pil_image in pil_images:
-            image_hashes.append(hashlib.sha256(pil_image["pil_image"].tobytes()).hexdigest())
-        cached = True
-        logger.debug("Checking if images are in cache")
-        for image_hash in image_hashes:
-            if image_hash not in self.cache.kv:
-                cached = False
-                break
-        if cached:
-            logger.debug(f"Images {image_hashes} already in cache")
-            return image_hashes
-        logger.debug("Embedding images")
-        batches = []
-        if len(pil_images) > batch_size:
-            for i in range(0, len(pil_images), batch_size):
-                batches.append(pil_images[i : i + batch_size])
-            batches.append(pil_images[i + batch_size :])
-        else:
-            batches.append(pil_images)
-        for batch in batches:
-            with torch.no_grad():
-                preprocess_images = []
-                for pil_image in batch:
-                    preprocess_images.append(
-                        self.model["preprocess"](pil_image["pil_image"]).unsqueeze(0).to(self.model["device"])
-                    )
-                preprocess_images = torch.cat(preprocess_images, dim=0)
-                image_features = self.model["model"].encode_image(preprocess_images)
-                self.save_batch({"image_hashes": image_hashes, "image_features": image_features})
-        return image_hashes
+        np.save(f"{self.cache.cache_dir}/{image_hash}", image_embed_array)
+        self.cache.add_sqlite_row(file=filename, hash=file_hash, pil_hash=image_hash)
