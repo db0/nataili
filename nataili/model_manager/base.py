@@ -30,7 +30,7 @@ import torch
 from tqdm import tqdm
 from transformers import logging
 
-from ..util import logger
+from nataili.util.logger import logger
 
 if sys.version_info < (3, 9):
     import importlib_resources

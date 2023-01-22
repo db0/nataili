@@ -20,10 +20,10 @@ import re
 
 import k_diffusion as K
 import numpy as np
-import PIL
 import skimage
 import torch
 from einops import rearrange
+from PIL import Image, ImageOps
 from slugify import slugify
 from torch import nn
 from transformers import CLIPFeatureExtractor
@@ -32,23 +32,18 @@ from ldm2.models.diffusion.dpm_solver import DPMSolverSampler
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
 from ldm.models.diffusion.plms import PLMSSampler
-from nataili.util import (
-    autocast_cuda,
-    create_random_tensors,
-    find_noise_for_image,
-    get_matched_noise,
-    get_next_sequence_number,
-    logger,
-    process_init_mask,
-    process_prompt_tokens,
-    resize_image,
-    save_sample,
-    seed_to_int,
-    torch_gc,
-)
+from nataili.util.cache import torch_gc
+from nataili.util.cast import autocast_cpu, autocast_cuda
+from nataili.util.create_random_tensors import create_random_tensors
+from nataili.util.get_next_sequence_number import get_next_sequence_number
+from nataili.util.img2img import find_noise_for_image, get_matched_noise, process_init_mask, resize_image
+from nataili.util.logger import logger
+from nataili.util.process_prompt_tokens import process_prompt_tokens
+from nataili.util.save_sample import save_sample
+from nataili.util.seed_to_int import seed_to_int
 
 try:
-    from nataili.util import load_from_plasma
+    from nataili.util.voodoo import load_from_plasma
 except ModuleNotFoundError as e:
     from nataili import disable_voodoo
 
@@ -124,7 +119,7 @@ class CompVis:
         elif mask_mode == "invert":
             if init_mask:
                 init_mask = process_init_mask(init_mask)
-                init_mask = PIL.ImageOps.invert(init_mask)
+                init_mask = ImageOps.invert(init_mask)
         elif mask_mode == "alpha":
             init_img_transparency = init_img.split()[-1].convert(
                 "L"
@@ -149,7 +144,7 @@ class CompVis:
             np_init = (np.asarray(init_img.convert("RGB")) / 255.0).astype(
                 np.float64
             )  # annoyingly complex mask fixing
-            np_mask_rgb = 1.0 - (np.asarray(PIL.ImageOps.invert(init_mask).convert("RGB")) / 255.0).astype(np.float64)
+            np_mask_rgb = 1.0 - (np.asarray(ImageOps.invert(init_mask).convert("RGB")) / 255.0).astype(np.float64)
             np_mask_rgb -= np.min(np_mask_rgb)
             np_mask_rgb /= np.max(np_mask_rgb)
             np_mask_rgb = 1.0 - np_mask_rgb
@@ -175,7 +170,7 @@ class CompVis:
                 noised[all_mask, :] ** 1.0, noised[ref_mask, :], channel_axis=1
             )
 
-            init_img = PIL.Image.fromarray(np.clip(noised * 255.0, 0.0, 255.0).astype(np.uint8), mode="RGB")
+            init_img = Image.fromarray(np.clip(noised * 255.0, 0.0, 255.0).astype(np.uint8), mode="RGB")
 
         def init(model, init_img):
             image = init_img.convert("RGB")
@@ -429,7 +424,7 @@ class CompVis:
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
         else:
-            for m in self.model.modules():
+            for m in self.model["model"].modules():
                 if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                     m.padding_mode = "circular" if seamless else m._orig_padding_mode
             if sampler_name == "PLMS":
@@ -545,7 +540,7 @@ class CompVis:
 
             x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
             x_sample = x_sample.astype(np.uint8)
-            image = PIL.Image.fromarray(x_sample)
+            image = Image.fromarray(x_sample)
             if self.safety_checker is not None and self.filter_nsfw:
                 image_features = self.feature_extractor(image, return_tensors="pt").to("cpu")
                 output_images, has_nsfw_concept = self.safety_checker(
@@ -553,7 +548,7 @@ class CompVis:
                 )
                 if has_nsfw_concept and True in has_nsfw_concept:
                     logger.info(f"Image {filename} has NSFW concept")
-                    image = PIL.Image.new("RGB", (512, 512))
+                    image = Image.new("RGB", (512, 512))
                     image_dict["censored"] = True
             image_dict["image"] = image
             self.images.append(image_dict)

@@ -15,8 +15,8 @@ from PIL import Image
 from realesrgan import RealESRGANer
 from torchvision.transforms.functional import normalize
 
-from .face_restoration_helper import FaceRestoreHelper
-from .misc import is_gray
+from nataili.util.codeformer.face_restoration_helper import FaceRestoreHelper
+from nataili.util.codeformer.misc import is_gray
 
 
 class CodeFormer(torch.nn.Module):

@@ -1,4 +1,4 @@
-from nataili.train import DreamboothLoRA
+from nataili.train.dreambooth import DreamboothLoRA
 
 trainer = DreamboothLoRA()
 

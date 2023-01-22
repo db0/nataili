@@ -1,17 +1,19 @@
 import time
 
-import PIL
+from PIL import Image
 
-from nataili import ModelManager, codeformers, logger
+from nataili.model_manager.codeformer import CodeFormerModelManager
+from nataili.codeformers import codeformers
+from nataili.util.logger import logger
 
-image = PIL.Image.open("01.png").convert("RGB")
+image = Image.open("01.png").convert("RGB")
 
-mm = ModelManager()
+mm = CodeFormerModelManager()
 
-mm.codeformer.load("CodeFormers")
+mm.load("CodeFormers")
 
 upscaler = codeformers(
-    mm.codeformer.loaded_models["CodeFormers"],
+    mm.loaded_models["CodeFormers"],
 )
 
 for iter in range(5):

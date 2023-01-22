@@ -20,15 +20,20 @@ from pathlib import Path
 
 import torch
 
-from ..util import logger
-from .base import BaseModelManager
+from nataili.model_manager.base import BaseModelManager
+from nataili.util.logger import logger
 
 
 class NewModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
+        self.download_reference = download_reference
         self.path = f"{Path.home()}/.cache/nataili/new"
         self.models_db_name = "new"
+        self.models_path = self.pkg / f"{self.models_db_name}.json"
+        self.remote_db = (
+            f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
+        )
         self.init()
 
     def load(

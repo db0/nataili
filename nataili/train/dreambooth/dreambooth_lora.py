@@ -18,7 +18,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 
 from nataili.train.dataset import EveryDreamBatch
 from nataili.train.lora.lora import LoRA
-from nataili.util import logger
+from nataili.util.logger import logger
 
 
 class DreamboothLoRA:
@@ -71,8 +71,6 @@ class DreamboothLoRA:
         self.accelerator = Accelerator(
             gradient_accumulation_steps=gradient_accumulation_steps,
             mixed_precision=mixed_precision,
-            log_with="tensorboard",
-            logging_dir=log_dir,
         )
         self.logger.info("Training LoRA")
         if train_text_encoder and gradient_accumulation_steps > 1 and self.accelerator.num_processes > 1:

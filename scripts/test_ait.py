@@ -1,15 +1,16 @@
-from nataili import ModelManager, logger
+from nataili.model_manager.aitemplate import AITemplateModelManager
+from nataili.util.logger import logger
 from nataili.aitemplate import AITemplate
 
-mm = ModelManager()
+mm = AITemplateModelManager()
 
-mm.aitemplate.load()
+mm.load()
 
 
 def run():
     while True:
         logger.info("init")
-        ait = AITemplate(mm.aitemplate.loaded_models["ait"])
+        ait = AITemplate(mm.loaded_models["ait"])
         logger.info("start")
         ait.generate("corgi", ddim_steps=30)
         logger.info("end")

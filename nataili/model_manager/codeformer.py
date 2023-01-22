@@ -20,17 +20,21 @@ from pathlib import Path
 
 import torch
 
-from ..util import CodeFormer, logger
-from .base import BaseModelManager
+from nataili.model_manager.base import BaseModelManager
+from nataili.model_manager.esrgan import EsrganModelManager
+from nataili.model_manager.gfpgan import GfpganModelManager
+from nataili.util.codeformer import CodeFormer
+from nataili.util.logger import logger
 
 
 class CodeFormerModelManager(BaseModelManager):
-    def __init__(self, gfpgan, esrgan, download_reference=True):
+    def __init__(self, download_reference=True):
         super().__init__()
+        self.download_reference = download_reference
         self.path = f"{Path.home()}/.cache/nataili/codeformer"
         self.models_db_name = "codeformer"
-        self.gfpgan = gfpgan
-        self.esrgan = esrgan
+        self.gfpgan = GfpganModelManager()
+        self.esrgan = EsrganModelManager()
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (
             f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"

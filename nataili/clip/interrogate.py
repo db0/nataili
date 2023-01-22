@@ -23,10 +23,9 @@ import torch
 from PIL import Image
 
 from nataili.cache import Cache
+from nataili.clip.image import ImageEmbed
+from nataili.clip.text import TextEmbed
 from nataili.util.logger import logger
-
-from .image import ImageEmbed
-from .text import TextEmbed
 
 
 class Interrogator:

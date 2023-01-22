@@ -8,11 +8,10 @@ from PIL import Image
 from tqdm import tqdm
 
 from nataili.cache import Cache
+from nataili.clip.image import ImageEmbed
 from nataili.model_manager.clip import ClipModelManager
 from nataili.util.logger import logger
 from nataili.util.normalized import normalized
-
-from .image import ImageEmbed
 
 
 class BulkImageEmbedder:

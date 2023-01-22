@@ -1,7 +1,8 @@
-from nataili import ModelManager, logger
+from nataili.model_manager.compvis import CompVisModelManager
+from nataili.util.logger import logger
 
-mm = ModelManager()
+mm = CompVisModelManager()
 
-for model in mm.compvis.models:
+for model in mm.models:
     logger.info(f"Downloading {model}...")
-    mm.compvis.download_model(model)
+    mm.download_model(model)

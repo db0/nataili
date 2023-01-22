@@ -12,7 +12,7 @@ from torch import einsum, nn
 
 from ldm.modules.diffusionmodules.util import checkpoint
 from nataili import disable_xformers
-from nataili.util import logger
+from nataili.util.logger import logger
 
 if sys.version_info < (3, 8):
     import importlib_metadata

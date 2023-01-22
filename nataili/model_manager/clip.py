@@ -22,13 +22,15 @@ import clip
 import open_clip
 import torch
 
-from ..util import load_list, logger
-from .base import BaseModelManager
+from nataili.model_manager.base import BaseModelManager
+from nataili.util.load_list import load_list
+from nataili.util.logger import logger
 
 
 class ClipModelManager(BaseModelManager):
-    def __init__(self):
+    def __init__(self, download_reference=True):
         super().__init__()
+        self.download_reference = download_reference
         self.path = f"{Path.home()}/.cache/nataili/clip"
         self.models_db_name = "clip"
         self.models_path = self.pkg / f"{self.models_db_name}.json"

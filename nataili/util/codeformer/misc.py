@@ -1,11 +1,12 @@
 import os
-from torch.hub import download_url_to_file, get_dir
 from urllib.parse import urlparse
 
 import cv2
 import numpy as np
 import torch
 from PIL import Image
+from torch.hub import download_url_to_file, get_dir
+
 
 def imwrite(img, file_path, params=None, auto_mkdir=True):
     """Write image to file.
@@ -27,11 +28,10 @@ def imwrite(img, file_path, params=None, auto_mkdir=True):
 
 
 def load_file_from_url(url, model_dir=None, progress=True, file_name=None):
-    """Ref:https://github.com/1adrianb/face-alignment/blob/master/face_alignment/utils.py
-    """
+    """Ref:https://github.com/1adrianb/face-alignment/blob/master/face_alignment/utils.py"""
     if model_dir is None:
         hub_dir = get_dir()
-        model_dir = os.path.join(hub_dir, 'checkpoints')
+        model_dir = os.path.join(hub_dir, "checkpoints")
     os.makedirs(model_dir, exist_ok=True)
     parts = urlparse(url)
     filename = os.path.basename(parts.path)

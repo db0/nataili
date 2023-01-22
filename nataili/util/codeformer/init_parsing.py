@@ -3,9 +3,10 @@ Modified from 's version.
 Allows cache dir to be specified.
 """
 import torch
-from .facelib.parsing.bisenet import BiSeNet
-from .facelib.parsing.parsenet import ParseNet
-from .misc import load_file_from_url
+
+from nataili.util.codeformer.facelib.parsing.bisenet import BiSeNet
+from nataili.util.codeformer.facelib.parsing.parsenet import ParseNet
+from nataili.util.codeformer.misc import load_file_from_url
 
 
 def init_parsing_model(model_name="bisenet", half=False, device="cuda", model_rootpath=""):

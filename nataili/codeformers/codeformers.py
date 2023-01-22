@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 from PIL import Image
 
-from nataili.util import PostProcessor
+from nataili.util.postprocessor import PostProcessor
 
 
 class codeformers(PostProcessor):

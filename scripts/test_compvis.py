@@ -1,12 +1,14 @@
 import uuid
 
-import PIL
+from PIL import Image
 
-from nataili import CompVis, ModelManager, logger
+from nataili.model_manager.compvis import CompVisModelManager
+from nataili.stable_diffusion.compvis import CompVis
+from nataili.util.logger import logger
 
-init_image = PIL.Image.open("./01.png").convert("RGB")
+init_image = Image.open("./01.png").convert("RGB")
 
-mm = ModelManager()
+mm = CompVisModelManager()
 
 models_to_load = [
     "stable_diffusion",
@@ -39,7 +41,7 @@ def test_compvis(
         logger.info("Using init image")
         logger.info(f"Denoising strength: {denoising_strength}")
     compvis = CompVis(
-        model=mm.compvis.loaded_models[model],
+        model=mm.loaded_models[model],
         model_name=model,
         output_dir=output_dir,
         disable_voodoo=True,
@@ -84,7 +86,7 @@ output_dir = f"./test_output/{str(uuid.uuid4())}"
 @logger.catch
 def test():
     for model in models_to_load:
-        mm.compvis.load(model)
+        mm.load(model)
 
         logger.info(f"Output dir: {output_dir}")
         logger.debug(f"Running inference on {model}")

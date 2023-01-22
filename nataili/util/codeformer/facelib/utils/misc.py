@@ -1,14 +1,15 @@
-import cv2
 import os
 import os.path as osp
-import numpy as np
-from PIL import Image
-import torch
-from torch.hub import download_url_to_file, get_dir
 from urllib.parse import urlparse
+
+import cv2
+
 # from basicsr.utils.download_util import download_file_from_google_drive
 import gdown
-
+import numpy as np
+import torch
+from PIL import Image
+from torch.hub import download_url_to_file, get_dir
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -17,20 +18,20 @@ def download_pretrained_models(file_ids, save_path_root):
     os.makedirs(save_path_root, exist_ok=True)
 
     for file_name, file_id in file_ids.items():
-        file_url = 'https://drive.google.com/uc?id='+file_id
+        file_url = "https://drive.google.com/uc?id=" + file_id
         save_path = osp.abspath(osp.join(save_path_root, file_name))
         if osp.exists(save_path):
-            user_response = input(f'{file_name} already exist. Do you want to cover it? Y/N\n')
-            if user_response.lower() == 'y':
-                print(f'Covering {file_name} to {save_path}')
+            user_response = input(f"{file_name} already exist. Do you want to cover it? Y/N\n")
+            if user_response.lower() == "y":
+                print(f"Covering {file_name} to {save_path}")
                 gdown.download(file_url, save_path, quiet=False)
                 # download_file_from_google_drive(file_id, save_path)
-            elif user_response.lower() == 'n':
-                print(f'Skipping {file_name}')
+            elif user_response.lower() == "n":
+                print(f"Skipping {file_name}")
             else:
-                raise ValueError('Wrong input. Only accepts Y/N.')
+                raise ValueError("Wrong input. Only accepts Y/N.")
         else:
-            print(f'Downloading {file_name} to {save_path}')
+            print(f"Downloading {file_name} to {save_path}")
             gdown.download(file_url, save_path, quiet=False)
             # download_file_from_google_drive(file_id, save_path)
 
@@ -69,8 +70,8 @@ def img2tensor(imgs, bgr2rgb=True, float32=True):
 
     def _totensor(img, bgr2rgb, float32):
         if img.shape[2] == 3 and bgr2rgb:
-            if img.dtype == 'float64':
-                img = img.astype('float32')
+            if img.dtype == "float64":
+                img = img.astype("float32")
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = torch.from_numpy(img.transpose(2, 0, 1))
         if float32:
@@ -84,8 +85,7 @@ def img2tensor(imgs, bgr2rgb=True, float32=True):
 
 
 def load_file_from_url(url, model_dir="", progress=True, file_name=None):
-    """Ref:https://github.com/1adrianb/face-alignment/blob/master/face_alignment/utils.py
-    """
+    """Ref:https://github.com/1adrianb/face-alignment/blob/master/face_alignment/utils.py"""
 
     os.makedirs(model_dir, exist_ok=True)
 
@@ -121,7 +121,7 @@ def scandir(dir_path, suffix=None, recursive=False, full_path=False):
 
     def _scandir(dir_path, suffix, recursive):
         for entry in os.scandir(dir_path):
-            if not entry.name.startswith('.') and entry.is_file():
+            if not entry.name.startswith(".") and entry.is_file():
                 if full_path:
                     return_path = entry.path
                 else:
@@ -156,16 +156,18 @@ def is_gray(img, threshold=10):
     else:
         return False
 
+
 def rgb2gray(img, out_channel=3):
-    r, g, b = img[:,:,0], img[:,:,1], img[:,:,2]
+    r, g, b = img[:, :, 0], img[:, :, 1], img[:, :, 2]
     gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
     if out_channel == 3:
-        gray = gray[:,:,np.newaxis].repeat(3, axis=2)
+        gray = gray[:, :, np.newaxis].repeat(3, axis=2)
     return gray
 
+
 def bgr2gray(img, out_channel=3):
-    b, g, r = img[:,:,0], img[:,:,1], img[:,:,2]
+    b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
     gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
     if out_channel == 3:
-        gray = gray[:,:,np.newaxis].repeat(3, axis=2)
+        gray = gray[:, :, np.newaxis].repeat(3, axis=2)
     return gray

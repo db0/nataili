@@ -1,16 +1,17 @@
 import time
+from PIL import Image
 
-import PIL
+from nataili.model_manager.gfpgan import GfpganModelManager
+from nataili.gfpgan import gfpgan
+from nataili.util.logger import logger
 
-from nataili import ModelManager, gfpgan, logger
+image = Image.open("01.png").convert("RGB")
 
-image = PIL.Image.open("01.png").convert("RGB")
+mm = GfpganModelManager()
 
-mm = ModelManager()
+mm.load("GFPGAN")
 
-mm.gfpgan.load("GFPGAN")
-
-facefixer = gfpgan(mm.gfpgan.loaded_models["GFPGAN"])
+facefixer = gfpgan(mm.loaded_models["GFPGAN"])
 
 tick = time.time()
 results = facefixer(input_image=image, strength=1.0)

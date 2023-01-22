@@ -1,6 +1,8 @@
 from uuid import uuid4
-import torch
-from nataili import CompVis, CompVisModelManager, logger
+
+from nataili.model_manager.compvis import CompVisModelManager
+from nataili.stable_diffusion.compvis import CompVis
+from nataili.util.logger import logger
 
 mm = CompVisModelManager()
 base_dir = f"./test_output/{str(uuid4())}"

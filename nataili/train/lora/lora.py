@@ -1,3 +1,4 @@
+import json
 import math
 from itertools import groupby
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
@@ -7,8 +8,10 @@ import PIL
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from safetensors.torch import load_file as safe_open
+from safetensors.torch import save_file as safe_save
 
-from nataili.util import logger
+from nataili.util.logger import logger
 
 
 class LoRA:
@@ -17,46 +20,137 @@ class LoRA:
         pass
 
     class LoraInjectedLinear(nn.Module):
-        def __init__(self, in_features, out_features, bias=False, r=4):
+        def __init__(self, in_features, out_features, bias=False, r=4, dropout_p=0.1, scale=1.0):
             super().__init__()
 
             if r > min(in_features, out_features):
                 raise ValueError(f"LoRA rank {r} must be less or equal than {min(in_features, out_features)}")
-
+            self.r = r
             self.linear = nn.Linear(in_features, out_features, bias)
             self.lora_down = nn.Linear(in_features, r, bias=False)
+            self.dropout = nn.Dropout(dropout_p)
             self.lora_up = nn.Linear(r, out_features, bias=False)
-            self.scale = 1.0
+            self.scale = scale
+            self.selector = nn.Identity()
 
             nn.init.normal_(self.lora_down.weight, std=1 / r)
             nn.init.zeros_(self.lora_up.weight)
 
         def forward(self, input):
-            return self.linear(input) + self.lora_up(self.lora_down(input)) * self.scale
+            return self.linear(input) + self.dropout(self.lora_up(self.selector(self.lora_down(input)))) * self.scale
 
-    def _find_children(
-        self,
-        model,
-        search_class: List[Type[nn.Module]] = [nn.Linear],
-    ):
-        """
-        Find all modules of a certain class (or union of classes).
+        def realize_as_lora(self):
+            return self.lora_up.weight.data * self.scale, self.lora_down.weight.data
 
-        Returns all matching modules, along with the parent of those moduless and the
-        names they are referenced by.
-        """
-        # For each target find every linear_class module that isn't a child of a LoraInjectedLinear
-        for parent in model.modules():
-            for name, module in parent.named_children():
-                if any([isinstance(module, _class) for _class in search_class]):
-                    yield parent, name, module
+        def set_selector_from_diag(self, diag: torch.Tensor):
+            # diag is a 1D tensor of size (r,)
+            assert diag.shape == (self.r,)
+            self.selector = nn.Linear(self.r, self.r, bias=False)
+            self.selector.weight.data = torch.diag(diag)
+            self.selector.weight.data = self.selector.weight.data.to(self.lora_up.weight.device).to(
+                self.lora_up.weight.dtype
+            )
+
+    class LoraInjectedConv2d(nn.Module):
+        def __init__(
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size,
+            stride=1,
+            padding=0,
+            dilation=1,
+            groups: int = 1,
+            bias: bool = True,
+            r: int = 4,
+            dropout_p: float = 0.1,
+            scale: float = 1.0,
+        ):
+            super().__init__()
+            if r > min(in_channels, out_channels):
+                raise ValueError(f"LoRA rank {r} must be less or equal than {min(in_channels, out_channels)}")
+            self.r = r
+            self.conv = nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=groups,
+                bias=bias,
+            )
+
+            self.lora_down = nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=r,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=groups,
+                bias=False,
+            )
+            self.dropout = nn.Dropout(dropout_p)
+            self.lora_up = nn.Conv2d(
+                in_channels=r,
+                out_channels=out_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False,
+            )
+            self.selector = nn.Identity()
+            self.scale = scale
+
+            nn.init.normal_(self.lora_down.weight, std=1 / r)
+            nn.init.zeros_(self.lora_up.weight)
+
+        def forward(self, input):
+            return self.conv(input) + self.dropout(self.lora_up(self.selector(self.lora_down(input)))) * self.scale
+
+        def realize_as_lora(self):
+            return self.lora_up.weight.data * self.scale, self.lora_down.weight.data
+
+        def set_selector_from_diag(self, diag: torch.Tensor):
+            # diag is a 1D tensor of size (r,)
+            assert diag.shape == (self.r,)
+            self.selector = nn.Conv2d(
+                in_channels=self.r,
+                out_channels=self.r,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False,
+            )
+            self.selector.weight.data = torch.diag(diag)
+
+            # same device + dtype as lora_up
+            self.selector.weight.data = self.selector.weight.data.to(self.lora_up.weight.device).to(
+                self.lora_up.weight.dtype
+            )
+
+    UNET_DEFAULT_TARGET_REPLACE = {"CrossAttention", "Attention", "GEGLU"}
+
+    UNET_EXTENDED_TARGET_REPLACE = {"ResnetBlock2D", "CrossAttention", "Attention", "GEGLU"}
+
+    TEXT_ENCODER_DEFAULT_TARGET_REPLACE = {"CLIPAttention"}
+
+    TEXT_ENCODER_EXTENDED_TARGET_REPLACE = {"CLIPAttention"}
+
+    DEFAULT_TARGET_REPLACE = UNET_DEFAULT_TARGET_REPLACE
+
+    EMBED_FLAG = "<embed>"
 
     def _find_modules_v2(
         self,
         model,
-        ancestor_class: Set[str] = ["CrossAttention", "Attention", "GEGLU"],
+        ancestor_class: Optional[Set[str]] = None,
         search_class: List[Type[nn.Module]] = [nn.Linear],
-        exclude_children_of: Optional[List[Type[nn.Module]]] = [LoraInjectedLinear],
+        exclude_children_of: Optional[List[Type[nn.Module]]] = [
+            LoraInjectedLinear,
+            LoraInjectedConv2d,
+        ],
     ):
         """
         Find all modules of a certain class (or union of classes) that are direct or
@@ -67,7 +161,11 @@ class LoRA:
         """
 
         # Get the targets we should replace all linears under
-        ancestors = (module for module in model.modules() if module.__class__.__name__ in ancestor_class)
+        if ancestor_class is not None:
+            ancestors = (module for module in model.modules() if module.__class__.__name__ in ancestor_class)
+        else:
+            # this, incase you want to naively iterate over all modules.
+            ancestors = [module for module in model.modules()]
 
         # For each target find every linear_class module that isn't a child of a LoraInjectedLinear
         for ancestor in ancestors:
@@ -87,9 +185,12 @@ class LoRA:
     def inject_trainable_lora(
         self,
         model: nn.Module,
-        target_replace_module: Set[str] = ["CrossAttention", "Attention", "GEGLU"],
+        target_replace_module: Set[str] = DEFAULT_TARGET_REPLACE,
         r: int = 4,
         loras=None,  # path to lora .pt
+        verbose: bool = False,
+        dropout_p: float = 0.0,
+        scale: float = 1.0,
     ):
         """
         inject lora into model, and returns lora parameter groups.
@@ -106,11 +207,16 @@ class LoRA:
         ):
             weight = _child_module.weight
             bias = _child_module.bias
+            if verbose:
+                print("LoRA Injection : injecting lora into ", name)
+                print("LoRA Injection : weight shape", weight.shape)
             _tmp = self.LoraInjectedLinear(
                 _child_module.in_features,
                 _child_module.out_features,
                 _child_module.bias is not None,
-                r,
+                r=r,
+                dropout_p=dropout_p,
+                scale=scale,
             )
             _tmp.linear.weight = weight
             if bias is not None:
@@ -133,12 +239,85 @@ class LoRA:
 
         return require_grad_params, names
 
-    def extract_lora_ups_down(self, model, target_replace_module=["CrossAttention", "Attention", "GEGLU"]):
+    def inject_trainable_lora_extended(
+        self,
+        model: nn.Module,
+        target_replace_module: Set[str] = UNET_EXTENDED_TARGET_REPLACE,
+        r: int = 4,
+        loras=None,  # path to lora .pt
+    ):
+        """
+        inject lora into model, and returns lora parameter groups.
+        """
+
+        require_grad_params = []
+        names = []
+
+        if loras is not None:
+            loras = torch.load(loras)
+
+        for _module, name, _child_module in self._find_modules_v2(
+            model, target_replace_module, search_class=[nn.Linear, nn.Conv2d]
+        ):
+            if _child_module.__class__ == nn.Linear:
+                weight = _child_module.weight
+                bias = _child_module.bias
+                _tmp = self.LoraInjectedLinear(
+                    _child_module.in_features,
+                    _child_module.out_features,
+                    _child_module.bias is not None,
+                    r=r,
+                )
+                _tmp.linear.weight = weight
+                if bias is not None:
+                    _tmp.linear.bias = bias
+            elif _child_module.__class__ == nn.Conv2d:
+                weight = _child_module.weight
+                bias = _child_module.bias
+                _tmp = self.LoraInjectedConv2d(
+                    _child_module.in_channels,
+                    _child_module.out_channels,
+                    _child_module.kernel_size,
+                    _child_module.stride,
+                    _child_module.padding,
+                    _child_module.dilation,
+                    _child_module.groups,
+                    _child_module.bias is not None,
+                    r=r,
+                )
+
+                _tmp.conv.weight = weight
+                if bias is not None:
+                    _tmp.conv.bias = bias
+
+            # switch the module
+            _tmp.to(_child_module.weight.device).to(_child_module.weight.dtype)
+            if bias is not None:
+                _tmp.to(_child_module.bias.device).to(_child_module.bias.dtype)
+
+            _module._modules[name] = _tmp
+
+            require_grad_params.append(_module._modules[name].lora_up.parameters())
+            require_grad_params.append(_module._modules[name].lora_down.parameters())
+
+            if loras is not None:
+                _module._modules[name].lora_up.weight = loras.pop(0)
+                _module._modules[name].lora_down.weight = loras.pop(0)
+
+            _module._modules[name].lora_up.weight.requires_grad = True
+            _module._modules[name].lora_down.weight.requires_grad = True
+            names.append(name)
+
+        return require_grad_params, names
+
+    def extract_lora_ups_down(self, model, target_replace_module=DEFAULT_TARGET_REPLACE):
 
         loras = []
 
         for _m, _n, _child_module in self._find_modules_v2(
-            model, target_replace_module, search_class=[self.LoraInjectedLinear]
+            model,
+            target_replace_module,
+            search_class=[self.LoraInjectedLinear, self.LoraInjectedConv2d],
         ):
             loras.append((_child_module.lora_up, _child_module.lora_down))
 
@@ -147,18 +326,26 @@ class LoRA:
 
         return loras
 
-    def save_lora_weight(
-        self,
-        model,
-        path="./lora.pt",
-        target_replace_module=["CrossAttention", "Attention", "GEGLU"],
-    ):
-        weights = []
-        for _up, _down in self.extract_lora_ups_down(model, target_replace_module=target_replace_module):
-            weights.append(_up.weight)
-            weights.append(_down.weight)
+    def extract_lora_as_tensor(self, model, target_replace_module=DEFAULT_TARGET_REPLACE, as_fp16=True):
 
-        torch.save(weights, path)
+        loras = []
+
+        for _m, _n, _child_module in self._find_modules_v2(
+            model,
+            target_replace_module,
+            search_class=[self.LoraInjectedLinear, self.LoraInjectedConv2d],
+        ):
+            up, down = _child_module.realize_as_lora()
+            if as_fp16:
+                up = up.to(torch.float16)
+                down = down.to(torch.float16)
+
+            loras.append((up, down))
+
+        if len(loras) == 0:
+            raise ValueError("No lora injected.")
+
+        return loras
 
     def save_lora_as_json(self, model, path="./lora.json"):
         weights = []
@@ -171,9 +358,23 @@ class LoRA:
         with open(path, "w") as f:
             json.dump(weights, f)
 
-    def save_safeloras(
+    def save_lora_weight(
+        self,
+        model,
+        path="./lora.pt",
+        target_replace_module=DEFAULT_TARGET_REPLACE,
+    ):
+        weights = []
+        for _up, _down in self.extract_lora_ups_down(model, target_replace_module=target_replace_module):
+            weights.append(_up.weight.to("cpu").to(torch.float16))
+            weights.append(_down.weight.to("cpu").to(torch.float16))
+
+        torch.save(weights, path)
+
+    def save_safeloras_with_embeds(
         self,
         modelmap: Dict[str, Tuple[nn.Module, Set[str]]] = {},
+        embeds: Dict[str, torch.Tensor] = {},
         outpath="./lora.safetensors",
     ):
         """
@@ -186,24 +387,34 @@ class LoRA:
         weights = {}
         metadata = {}
 
-        import json
-
-        from safetensors.torch import save_file
-
         for name, (model, target_replace_module) in modelmap.items():
             metadata[name] = json.dumps(list(target_replace_module))
 
-            for i, (_up, _down) in enumerate(self.extract_lora_ups_down(model, target_replace_module)):
-                metadata[f"{name}:{i}:rank"] = str(_down.out_features)
-                weights[f"{name}:{i}:up"] = _up.weight
-                weights[f"{name}:{i}:down"] = _down.weight
+            for i, (_up, _down) in enumerate(self.extract_lora_as_tensor(model, target_replace_module)):
+                rank = _down.shape[0]
 
-        self.logger.info(f"Saving weights to {outpath} with metadata", metadata)
-        save_file(weights, outpath, metadata)
+                metadata[f"{name}:{i}:rank"] = str(rank)
+                weights[f"{name}:{i}:up"] = _up
+                weights[f"{name}:{i}:down"] = _down
 
-    def convert_loras_to_safeloras(
+        for token, tensor in embeds.items():
+            metadata[token] = self.self.EMBED_FLAG
+            weights[token] = tensor
+
+        print(f"Saving weights to {outpath}")
+        safe_save(weights, outpath, metadata)
+
+    def save_safeloras(
+        self,
+        modelmap: Dict[str, Tuple[nn.Module, Set[str]]] = {},
+        outpath="./lora.safetensors",
+    ):
+        return self.save_safeloras_with_embeds(modelmap=modelmap, outpath=outpath)
+
+    def convert_loras_to_safeloras_with_embeds(
         self,
         modelmap: Dict[str, Tuple[str, Set[str], int]] = {},
+        embeds: Dict[str, torch.Tensor] = {},
         outpath="./lora.safetensors",
     ):
         """
@@ -216,10 +427,6 @@ class LoRA:
 
         weights = {}
         metadata = {}
-
-        import json
-
-        from safetensors.torch import save_file
 
         for name, (path, target_replace_module, r) in modelmap.items():
             metadata[name] = json.dumps(list(target_replace_module))
@@ -235,8 +442,19 @@ class LoRA:
                 else:
                     weights[f"{name}:{i}:down"] = weight
 
-        self.logger.info(f"Saving weights to {outpath} with metadata", metadata)
-        save_file(weights, outpath, metadata)
+        for token, tensor in embeds.items():
+            metadata[token] = self.EMBED_FLAG
+            weights[token] = tensor
+
+        print(f"Saving weights to {outpath}")
+        safe_save(weights, outpath, metadata)
+
+    def convert_loras_to_safeloras(
+        self,
+        modelmap: Dict[str, Tuple[str, Set[str], int]] = {},
+        outpath="./lora.safetensors",
+    ):
+        self.convert_loras_to_safeloras_with_embeds(modelmap=modelmap, outpath=outpath)
 
     def parse_safeloras(
         self,
@@ -255,9 +473,6 @@ class LoRA:
         }
         """
         loras = {}
-
-        import json
-
         metadata = safeloras.metadata()
 
         get_name = lambda k: k.split(":")[0]
@@ -266,12 +481,22 @@ class LoRA:
         keys.sort(key=get_name)
 
         for name, module_keys in groupby(keys, get_name):
+            info = metadata.get(name)
+
+            if not info:
+                raise ValueError(f"Tensor {name} has no metadata - is this a Lora safetensor?")
+
+            # Skip Textual Inversion embeds
+            if info == self.EMBED_FLAG:
+                continue
+
+            # Handle Loras
             # Extract the targets
-            target = json.loads(metadata[name])
+            target = json.loads(info)
 
             # Build the result lists - Python needs us to preallocate lists to insert into them
             module_keys = list(module_keys)
-            ranks = [None] * (len(module_keys) // 2)
+            ranks = [4] * (len(module_keys) // 2)
             weights = [None] * len(module_keys)
 
             for key in module_keys:
@@ -280,7 +505,7 @@ class LoRA:
                 idx = int(idx)
 
                 # Add the rank
-                ranks[idx] = json.loads(metadata[f"{name}:{idx}:rank"])
+                ranks[idx] = int(metadata[f"{name}:{idx}:rank"])
 
                 # Insert the weight into the list
                 idx = idx * 2 + (1 if direction == "down" else 0)
@@ -290,92 +515,77 @@ class LoRA:
 
         return loras
 
+    def parse_safeloras_embeds(
+        self,
+        safeloras,
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Converts a loaded safetensor file that contains Textual Inversion embeds into
+        a dictionary of embed_token: Tensor
+        """
+        embeds = {}
+        metadata = safeloras.metadata()
+
+        for key in safeloras.keys():
+            # Only handle Textual Inversion embeds
+            meta = metadata.get(key)
+            if not meta or meta != self.EMBED_FLAG:
+                continue
+
+            embeds[key] = safeloras.get_tensor(key)
+
+        return embeds
+
     def load_safeloras(self, path, device="cpu"):
-
-        from safetensors.torch import safe_open
-
         safeloras = safe_open(path, framework="pt", device=device)
         return self.parse_safeloras(safeloras)
 
-    def weight_apply_lora(
-        self, model, loras, target_replace_module=["CrossAttention", "Attention", "GEGLU"], alpha=1.0
-    ):
+    def load_safeloras_embeds(self, path, device="cpu"):
+        safeloras = safe_open(path, framework="pt", device=device)
+        return self.parse_safeloras_embeds(safeloras)
 
-        for _m, _n, _child_module in self._find_modules_v2(model, target_replace_module):
-            weight = _child_module.weight
+    def load_safeloras_both(self, path, device="cpu"):
+        safeloras = safe_open(path, framework="pt", device=device)
+        return self.parse_safeloras(safeloras), self.parse_safeloras_embeds(safeloras)
 
-            up_weight = loras.pop(0).detach().to(weight.device)
-            down_weight = loras.pop(0).detach().to(weight.device)
+    def collapse_lora(self, model, alpha=1.0):
 
-            # W <- W + U * D
-            weight = weight + alpha * (up_weight @ down_weight).type(weight.dtype)
-            _child_module.weight = nn.Parameter(weight)
-
-    def monkeypatch_lora(
-        self, model, loras, target_replace_module=["CrossAttention", "Attention", "GEGLU"], r: int = 4
-    ):
         for _module, name, _child_module in self._find_modules_v2(
-            model, target_replace_module, search_class=[nn.Linear]
+            model,
+            self.UNET_EXTENDED_TARGET_REPLACE | self.TEXT_ENCODER_EXTENDED_TARGET_REPLACE,
+            search_class=[self.LoraInjectedLinear, self.LoraInjectedConv2d],
         ):
-            weight = _child_module.weight
-            bias = _child_module.bias
-            _tmp = self.LoraInjectedLinear(
-                _child_module.in_features,
-                _child_module.out_features,
-                _child_module.bias is not None,
-                r=r,
-            )
-            _tmp.linear.weight = weight
 
-            if bias is not None:
-                _tmp.linear.bias = bias
+            if isinstance(_child_module, self.LoraInjectedLinear):
+                print("Collapsing Lin Lora in", name)
 
-            # switch the module
-            _module._modules[name] = _tmp
+                _child_module.linear.weight = nn.Parameter(
+                    _child_module.linear.weight.data
+                    + alpha
+                    * (_child_module.lora_up.weight.data @ _child_module.lora_down.weight.data)
+                    .type(_child_module.linear.weight.dtype)
+                    .to(_child_module.linear.weight.device)
+                )
 
-            up_weight = loras.pop(0)
-            down_weight = loras.pop(0)
-
-            _module._modules[name].lora_up.weight = nn.Parameter(up_weight.type(weight.dtype))
-            _module._modules[name].lora_down.weight = nn.Parameter(down_weight.type(weight.dtype))
-
-            _module._modules[name].to(weight.device)
-
-    def monkeypatch_replace_lora(
-        self, model, loras, target_replace_module=["CrossAttention", "Attention", "GEGLU"], r: int = 4
-    ):
-        for _module, name, _child_module in self._find_modules_v2(
-            model, target_replace_module, search_class=[self.LoraInjectedLinear]
-        ):
-            weight = _child_module.linear.weight
-            bias = _child_module.linear.bias
-            _tmp = self.LoraInjectedLinear(
-                _child_module.linear.in_features,
-                _child_module.linear.out_features,
-                _child_module.linear.bias is not None,
-                r=r,
-            )
-            _tmp.linear.weight = weight
-
-            if bias is not None:
-                _tmp.linear.bias = bias
-
-            # switch the module
-            _module._modules[name] = _tmp
-
-            up_weight = loras.pop(0)
-            down_weight = loras.pop(0)
-
-            _module._modules[name].lora_up.weight = nn.Parameter(up_weight.type(weight.dtype))
-            _module._modules[name].lora_down.weight = nn.Parameter(down_weight.type(weight.dtype))
-
-            _module._modules[name].to(weight.device)
+            else:
+                print("Collapsing Conv Lora in", name)
+                _child_module.conv.weight = nn.Parameter(
+                    _child_module.conv.weight.data
+                    + alpha
+                    * (
+                        _child_module.lora_up.weight.data.flatten(start_dim=1)
+                        @ _child_module.lora_down.weight.data.flatten(start_dim=1)
+                    )
+                    .reshape(_child_module.conv.weight.data.shape)
+                    .type(_child_module.conv.weight.dtype)
+                    .to(_child_module.conv.weight.device)
+                )
 
     def monkeypatch_or_replace_lora(
         self,
         model,
         loras,
-        target_replace_module=["CrossAttention", "Attention", "GEGLU"],
+        target_replace_module=DEFAULT_TARGET_REPLACE,
         r: Union[int, List[int]] = 4,
     ):
         for _module, name, _child_module in self._find_modules_v2(
@@ -407,6 +617,73 @@ class LoRA:
 
             _module._modules[name].to(weight.device)
 
+    def monkeypatch_or_replace_lora_extended(
+        self,
+        model,
+        loras,
+        target_replace_module=DEFAULT_TARGET_REPLACE,
+        r: Union[int, List[int]] = 4,
+    ):
+        for _module, name, _child_module in self._find_modules_v2(
+            model,
+            target_replace_module,
+            search_class=[nn.Linear, self.LoraInjectedLinear, nn.Conv2d, self.LoraInjectedConv2d],
+        ):
+
+            if (_child_module.__class__ == nn.Linear) or (_child_module.__class__ == self.LoraInjectedLinear):
+                if len(loras[0].shape) != 2:
+                    continue
+
+                _source = _child_module.linear if isinstance(_child_module, self.LoraInjectedLinear) else _child_module
+
+                weight = _source.weight
+                bias = _source.bias
+                _tmp = self.LoraInjectedLinear(
+                    _source.in_features,
+                    _source.out_features,
+                    _source.bias is not None,
+                    r=r.pop(0) if isinstance(r, list) else r,
+                )
+                _tmp.linear.weight = weight
+
+                if bias is not None:
+                    _tmp.linear.bias = bias
+
+            elif (_child_module.__class__ == nn.Conv2d) or (_child_module.__class__ == self.LoraInjectedConv2d):
+                if len(loras[0].shape) != 4:
+                    continue
+                _source = _child_module.conv if isinstance(_child_module, self.LoraInjectedConv2d) else _child_module
+
+                weight = _source.weight
+                bias = _source.bias
+                _tmp = self.LoraInjectedConv2d(
+                    _source.in_channels,
+                    _source.out_channels,
+                    _source.kernel_size,
+                    _source.stride,
+                    _source.padding,
+                    _source.dilation,
+                    _source.groups,
+                    _source.bias is not None,
+                    r=r.pop(0) if isinstance(r, list) else r,
+                )
+
+                _tmp.conv.weight = weight
+
+                if bias is not None:
+                    _tmp.conv.bias = bias
+
+            # switch the module
+            _module._modules[name] = _tmp
+
+            up_weight = loras.pop(0)
+            down_weight = loras.pop(0)
+
+            _module._modules[name].lora_up.weight = nn.Parameter(up_weight.type(weight.dtype))
+            _module._modules[name].lora_down.weight = nn.Parameter(down_weight.type(weight.dtype))
+
+            _module._modules[name].to(weight.device)
+
     def monkeypatch_or_replace_safeloras(self, models, safeloras):
         loras = self.parse_safeloras(safeloras)
 
@@ -414,21 +691,43 @@ class LoRA:
             model = getattr(models, name, None)
 
             if not model:
-                self.logger.info(f"No model provided for {name}, contained in Lora")
+                print(f"No model provided for {name}, contained in Lora")
                 continue
 
-            self.monkeypatch_or_replace_lora(model, lora, target, ranks)
+            self.monkeypatch_or_replace_lora_extended(model, lora, target, ranks)
 
     def monkeypatch_remove_lora(self, model):
-        for _module, name, _child_module in self._find_children(model, search_class=[self.LoraInjectedLinear]):
-            _source = _child_module.linear
-            weight, bias = _source.weight, _source.bias
+        for _module, name, _child_module in self._find_modules_v2(
+            model, search_class=[self.LoraInjectedLinear, self.LoraInjectedConv2d]
+        ):
+            if isinstance(_child_module, self.LoraInjectedLinear):
+                _source = _child_module.linear
+                weight, bias = _source.weight, _source.bias
 
-            _tmp = nn.Linear(_source.in_features, _source.out_features, bias is not None)
+                _tmp = nn.Linear(_source.in_features, _source.out_features, bias is not None)
 
-            _tmp.weight = weight
-            if bias is not None:
-                _tmp.bias = bias
+                _tmp.weight = weight
+                if bias is not None:
+                    _tmp.bias = bias
+
+            else:
+                _source = _child_module.conv
+                weight, bias = _source.weight, _source.bias
+
+                _tmp = nn.Conv2d(
+                    in_channels=_source.in_channels,
+                    out_channels=_source.out_channels,
+                    kernel_size=_source.kernel_size,
+                    stride=_source.stride,
+                    padding=_source.padding,
+                    dilation=_source.dilation,
+                    groups=_source.groups,
+                    bias=bias is not None,
+                )
+
+                _tmp.weight = weight
+                if bias is not None:
+                    _tmp.bias = bias
 
             _module._modules[name] = _tmp
 
@@ -436,7 +735,7 @@ class LoRA:
         self,
         model,
         loras,
-        target_replace_module=["CrossAttention", "Attention", "GEGLU"],
+        target_replace_module=DEFAULT_TARGET_REPLACE,
         alpha: float = 1.0,
         beta: float = 1.0,
     ):
@@ -461,8 +760,13 @@ class LoRA:
 
     def tune_lora_scale(self, model, alpha: float = 1.0):
         for _module in model.modules():
-            if _module.__class__.__name__ == "LoraInjectedLinear":
+            if _module.__class__.__name__ in ["LoraInjectedLinear", "LoraInjectedConv2d"]:
                 _module.scale = alpha
+
+    def set_lora_diag(self, model, diag: torch.Tensor):
+        for _module in model.modules():
+            if _module.__class__.__name__ in ["LoraInjectedLinear", "LoraInjectedConv2d"]:
+                _module.set_selector_from_diag(diag)
 
     def _text_lora_path(self, path: str) -> str:
         assert path.endswith(".pt"), "Only .pt files are supported"
@@ -472,94 +776,138 @@ class LoRA:
         assert path.endswith(".pt"), "Only .pt files are supported"
         return ".".join(path.split(".")[:-1] + ["ti", "pt"])
 
-    def load_learned_embed_in_clip(self, learned_embeds_path, text_encoder, tokenizer, token=None, idempotent=False):
-        loaded_learned_embeds = torch.load(learned_embeds_path, map_location="cpu")
+    def apply_learned_embed_in_clip(
+        self,
+        learned_embeds,
+        text_encoder,
+        tokenizer,
+        token: Optional[Union[str, List[str]]] = None,
+        idempotent=False,
+    ):
+        if isinstance(token, str):
+            trained_tokens = [token]
+        elif isinstance(token, list):
+            assert len(learned_embeds.keys()) == len(
+                token
+            ), "The number of tokens and the number of embeds should be the same"
+            trained_tokens = token
+        else:
+            trained_tokens = list(learned_embeds.keys())
 
-        # separate token and the embeds
-        trained_token = list(loaded_learned_embeds.keys())[0]
-        embeds = loaded_learned_embeds[trained_token]
+        for token in trained_tokens:
+            print(token)
+            embeds = learned_embeds[token]
 
-        # cast to dtype of text_encoder
-        dtype = text_encoder.get_input_embeddings().weight.dtype
+            # cast to dtype of text_encoder
+            dtype = text_encoder.get_input_embeddings().weight.dtype
+            num_added_tokens = tokenizer.add_tokens(token)
 
-        # add the token in tokenizer
-        token = token if token is not None else trained_token
-        num_added_tokens = tokenizer.add_tokens(token)
-        i = 1
-        if not idempotent:
-            while num_added_tokens == 0:
-                self.logger.info(f"The tokenizer already contains the token {token}.")
-                token = f"{token[:-1]}-{i}>"
-                self.logger.info(f"Attempting to add the token {token}.")
-                num_added_tokens = tokenizer.add_tokens(token)
-                i += 1
-        elif num_added_tokens == 0 and idempotent:
-            self.logger.info(f"The tokenizer already contains the token {token}.")
-            self.logger.info(f"Replacing {token} embedding.")
+            i = 1
+            if not idempotent:
+                while num_added_tokens == 0:
+                    print(f"The tokenizer already contains the token {token}.")
+                    token = f"{token[:-1]}-{i}>"
+                    print(f"Attempting to add the token {token}.")
+                    num_added_tokens = tokenizer.add_tokens(token)
+                    i += 1
+            elif num_added_tokens == 0 and idempotent:
+                print(f"The tokenizer already contains the token {token}.")
+                print(f"Replacing {token} embedding.")
 
-        # resize the token embeddings
-        text_encoder.resize_token_embeddings(len(tokenizer))
+            # resize the token embeddings
+            text_encoder.resize_token_embeddings(len(tokenizer))
 
-        # get the id for the token and assign the embeds
-        token_id = tokenizer.convert_tokens_to_ids(token)
-        text_encoder.get_input_embeddings().weight.data[token_id] = embeds
+            # get the id for the token and assign the embeds
+            token_id = tokenizer.convert_tokens_to_ids(token)
+            text_encoder.get_input_embeddings().weight.data[token_id] = embeds
         return token
+
+    def load_learned_embed_in_clip(
+        self,
+        learned_embeds_path,
+        text_encoder,
+        tokenizer,
+        token: Optional[Union[str, List[str]]] = None,
+        idempotent=False,
+    ):
+        learned_embeds = torch.load(learned_embeds_path)
+        self.apply_learned_embed_in_clip(learned_embeds, text_encoder, tokenizer, token, idempotent)
 
     def patch_pipe(
         self,
         pipe,
-        unet_path,
-        token: str,
+        maybe_unet_path,
+        token: Optional[str] = None,
         r: int = 4,
         patch_unet=True,
-        patch_text=False,
-        patch_ti=False,
+        patch_text=True,
+        patch_ti=True,
         idempotent_token=True,
-        unet_target_replace_module=["CrossAttention", "Attention", "GEGLU"],
-        text_target_replace_module={"CLIPAttention"},
+        unet_target_replace_module=DEFAULT_TARGET_REPLACE,
+        text_target_replace_module=TEXT_ENCODER_DEFAULT_TARGET_REPLACE,
     ):
-        assert len(token) > 0, "Token cannot be empty. Input token non-empty token like <s>."
+        if maybe_unet_path.endswith(".pt"):
+            # torch format
 
-        ti_path = self._ti_lora_path(unet_path)
-        text_path = self._text_lora_path(unet_path)
+            if maybe_unet_path.endswith(".ti.pt"):
+                unet_path = maybe_unet_path[:-6] + ".pt"
+            elif maybe_unet_path.endswith(".text_encoder.pt"):
+                unet_path = maybe_unet_path[:-16] + ".pt"
 
-        if patch_unet:
-            self.logger.info("LoRA : Patching Unet")
-            self.monkeypatch_or_replace_lora(
-                pipe.unet,
-                torch.load(unet_path),
-                r=r,
-                target_replace_module=unet_target_replace_module,
-            )
+            ti_path = self._ti_lora_path(unet_path)
+            text_path = self._text_lora_path(unet_path)
 
-        if patch_text:
-            self.logger.info("LoRA : Patching text encoder")
-            self.monkeypatch_or_replace_lora(
-                pipe.text_encoder,
-                torch.load(text_path),
-                target_replace_module=text_target_replace_module,
-                r=r,
-            )
-        if patch_ti:
-            self.logger.info("LoRA : Patching token input")
-            token = self.load_learned_embed_in_clip(
-                ti_path,
-                pipe.text_encoder,
-                pipe.tokenizer,
-                token,
-                idempotent=idempotent_token,
-            )
+            if patch_unet:
+                print("LoRA : Patching Unet")
+                self.monkeypatch_or_replace_lora(
+                    pipe.unet,
+                    torch.load(unet_path),
+                    r=r,
+                    target_replace_module=unet_target_replace_module,
+                )
+
+            if patch_text:
+                print("LoRA : Patching text encoder")
+                self.monkeypatch_or_replace_lora(
+                    pipe.text_encoder,
+                    torch.load(text_path),
+                    target_replace_module=text_target_replace_module,
+                    r=r,
+                )
+            if patch_ti:
+                print("LoRA : Patching token input")
+                token = self.load_learned_embed_in_clip(
+                    ti_path,
+                    pipe.text_encoder,
+                    pipe.tokenizer,
+                    token=token,
+                    idempotent=idempotent_token,
+                )
+
+        elif maybe_unet_path.endswith(".safetensors"):
+            safeloras = safe_open(maybe_unet_path, framework="pt", device="cpu")
+            self.monkeypatch_or_replace_safeloras(pipe, safeloras)
+            tok_dict = self.parse_safeloras_embeds(safeloras)
+            if patch_ti:
+                self.apply_learned_embed_in_clip(
+                    tok_dict,
+                    pipe.text_encoder,
+                    pipe.tokenizer,
+                    token=token,
+                    idempotent=idempotent_token,
+                )
+            return tok_dict
 
     @torch.no_grad()
     def inspect_lora(self, model):
         moved = {}
 
         for name, _module in model.named_modules():
-            if _module.__class__.__name__ == "LoraInjectedLinear":
+            if _module.__class__.__name__ in ["LoraInjectedLinear", "LoraInjectedConv2d"]:
                 ups = _module.lora_up.weight.data.clone()
                 downs = _module.lora_down.weight.data.clone()
 
-                wght: torch.Tensor = ups @ downs
+                wght: torch.Tensor = ups.flatten(1) @ downs.flatten(1)
 
                 dist = wght.flatten().abs().mean().item()
                 if name in moved:
@@ -573,32 +921,62 @@ class LoRA:
         self,
         unet,
         text_encoder,
-        placeholder_token_id,
-        placeholder_token,
         save_path,
+        placeholder_token_ids=None,
+        placeholder_tokens=None,
         save_lora=True,
-        target_replace_module_text={"CLIPAttention"},
-        target_replace_module_unet=["CrossAttention", "Attention", "GEGLU"],
+        save_ti=True,
+        target_replace_module_text=TEXT_ENCODER_DEFAULT_TARGET_REPLACE,
+        target_replace_module_unet=DEFAULT_TARGET_REPLACE,
+        safe_form=True,
     ):
+        if not safe_form:
+            # save ti
+            if save_ti:
+                ti_path = self._ti_lora_path(save_path)
+                learned_embeds_dict = {}
+                for tok, tok_id in zip(placeholder_tokens, placeholder_token_ids):
+                    learned_embeds = text_encoder.get_input_embeddings().weight[tok_id]
+                    print(
+                        f"Current Learned Embeddings for {tok}:, id {tok_id} ",
+                        learned_embeds[:4],
+                    )
+                    learned_embeds_dict[tok] = learned_embeds.detach().cpu()
 
-        # save ti
-        ti_path = self._ti_lora_path(save_path)
-        learned_embeds = text_encoder.get_input_embeddings().weight[placeholder_token_id]
-        self.logger.info("Current Learned Embeddings: ", learned_embeds[:4])
+                torch.save(learned_embeds_dict, ti_path)
+                print("Ti saved to ", ti_path)
 
-        learned_embeds_dict = {placeholder_token: learned_embeds.detach().cpu()}
-        torch.save(learned_embeds_dict, ti_path)
-        self.logger.info("Ti saved to ", ti_path)
+            # save text encoder
+            if save_lora:
 
-        # save text encoder
-        if save_lora:
+                self.save_lora_weight(unet, save_path, target_replace_module=target_replace_module_unet)
+                print("Unet saved to ", save_path)
 
-            self.save_lora_weight(unet, save_path, target_replace_module=target_replace_module_unet)
-            self.logger.info("Unet saved to ", save_path)
+                self.save_lora_weight(
+                    text_encoder,
+                    self._text_lora_path(save_path),
+                    target_replace_module=target_replace_module_text,
+                )
+                print("Text Encoder saved to ", self._text_lora_path(save_path))
 
-            self.save_lora_weight(
-                text_encoder,
-                self._text_lora_path(save_path),
-                target_replace_module=target_replace_module_text,
-            )
-            self.logger.info("Text Encoder saved to ", self._text_lora_path(save_path))
+        else:
+            assert save_path.endswith(".safetensors"), f"Save path : {save_path} should end with .safetensors"
+
+            loras = {}
+            embeds = {}
+
+            if save_lora:
+
+                loras["unet"] = (unet, target_replace_module_unet)
+                loras["text_encoder"] = (text_encoder, target_replace_module_text)
+
+            if save_ti:
+                for tok, tok_id in zip(placeholder_tokens, placeholder_token_ids):
+                    learned_embeds = text_encoder.get_input_embeddings().weight[tok_id]
+                    print(
+                        f"Current Learned Embeddings for {tok}:, id {tok_id} ",
+                        learned_embeds[:4],
+                    )
+                    embeds[tok] = learned_embeds.detach().cpu()
+
+            self.save_safeloras_with_embeds(loras, embeds, save_path)

@@ -5,11 +5,12 @@ Allows cache dir to be specified.
 from copy import deepcopy
 
 import torch
-from .facelib.detection.retinaface.retinaface import RetinaFace
-from .facelib.detection.yolov5face.face_detector import YoloDetector
-from .facelib.detection.yolov5face.models.common import Conv
-from .misc import load_file_from_url
 from torch import nn
+
+from nataili.util.codeformer.facelib.detection.retinaface.retinaface import RetinaFace
+from nataili.util.codeformer.facelib.detection.yolov5face.face_detector import YoloDetector
+from nataili.util.codeformer.facelib.detection.yolov5face.models.common import Conv
+from nataili.util.codeformer.misc import load_file_from_url
 
 
 def init_detection_model(model_name, half=False, device="cuda", model_rootpath=""):

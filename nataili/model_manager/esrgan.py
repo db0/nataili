@@ -22,13 +22,14 @@ import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 
-from ..util import logger
-from .base import BaseModelManager
+from nataili.model_manager.base import BaseModelManager
+from nataili.util.logger import logger
 
 
 class EsrganModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
+        self.download_reference = download_reference
         self.path = f"{Path.home()}/.cache/nataili/esrgan"
         self.models_db_name = "esrgan"
         self.models_path = self.pkg / f"{self.models_db_name}.json"

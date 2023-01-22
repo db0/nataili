@@ -8,11 +8,11 @@ import os
 import cv2
 import numpy as np
 import torch
-from .misc import bgr2gray, img2tensor, imwrite, is_gray
 from torchvision.transforms.functional import normalize
 
-from .init_detection import init_detection_model
-from .init_parsing import init_parsing_model
+from nataili.util.codeformer.init_detection import init_detection_model
+from nataili.util.codeformer.init_parsing import init_parsing_model
+from nataili.util.codeformer.misc import bgr2gray, img2tensor, imwrite, is_gray
 
 
 def get_largest_face(det_faces, h, w):

@@ -1,13 +1,15 @@
-import PIL
+from PIL import Image
 
-from nataili import Caption, ModelManager, logger
+from nataili.model_manager.blip import BlipModelManager
+from nataili.blip import Caption
+from nataili.util.logger import logger
 
-image = PIL.Image.open("01.png").convert("RGB")
+image = Image.open("test.png")
 
-mm = ModelManager()
+mm = BlipModelManager()
 
-mm.blip.load("BLIP")
+mm.load("BLIP")
 
-blip = Caption(mm.blip.loaded_models["BLIP"])
+blip = Caption(mm.loaded_models["BLIP"])
 
-logger.generation(f"caption: {blip(image, sample=False)} - sample: False")
+logger.generation(f"caption: {blip(image)}")

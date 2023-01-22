@@ -7,10 +7,10 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..yolov5face.models.common import Conv
-from ..yolov5face.models.yolo import Model
-from ..yolov5face.utils.datasets import letterbox
-from ..yolov5face.utils.general import (
+from nataili.util.codeformer.facelib.detection.yolov5face.models.common import Conv
+from nataili.util.codeformer.facelib.detection.yolov5face.models.yolo import Model
+from nataili.util.codeformer.facelib.detection.yolov5face.utils.datasets import letterbox
+from nataili.util.codeformer.facelib.detection.yolov5face.utils.general import (
     check_img_size,
     non_max_suppression_face,
     scale_coords,
@@ -60,13 +60,9 @@ class YoloDetector:
             if self.target_size:
                 r = self.target_size / min(h0, w0)  # resize image to img_size
                 if r < 1:
-                    img = cv2.resize(
-                        img, (int(w0 * r), int(h0 * r)), interpolation=cv2.INTER_LINEAR
-                    )
+                    img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=cv2.INTER_LINEAR)
 
-            imgsz = check_img_size(
-                max(img.shape[:2]), s=self.detector.stride.max()
-            )  # check img_size
+            imgsz = check_img_size(max(img.shape[:2]), s=self.detector.stride.max())  # check img_size
             img = letterbox(img, new_shape=imgsz)[0]
             pp_imgs.append(img)
         pp_imgs = np.array(pp_imgs)
@@ -91,14 +87,10 @@ class YoloDetector:
             img_shape = origimg.shape
             image_height, image_width = img_shape[:2]
             gn = torch.tensor(img_shape)[[1, 0, 1, 0]]  # normalization gain whwh
-            gn_lks = torch.tensor(img_shape)[
-                [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
-            ]  # normalization gain landmarks
+            gn_lks = torch.tensor(img_shape)[[1, 0, 1, 0, 1, 0, 1, 0, 1, 0]]  # normalization gain landmarks
             det = pred[image_id].cpu()
             scale_coords(imgs[image_id].shape[1:], det[:, :4], img_shape).round()
-            scale_coords_landmarks(
-                imgs[image_id].shape[1:], det[:, 5:15], img_shape
-            ).round()
+            scale_coords_landmarks(imgs[image_id].shape[1:], det[:, 5:15], img_shape).round()
 
             for j in range(det.size()[0]):
                 box = (det[j, :4].view(1, 4) / gn).view(-1).tolist()
@@ -119,10 +111,7 @@ class YoloDetector:
                 lm = list(
                     map(
                         int,
-                        [
-                            i * image_width if j % 2 == 0 else i * image_height
-                            for j, i in enumerate(lm)
-                        ],
+                        [i * image_width if j % 2 == 0 else i * image_height for j, i in enumerate(lm)],
                     )
                 )
                 lm = [lm[i : i + 2] for i in range(0, len(lm), 2)]
@@ -155,9 +144,7 @@ class YoloDetector:
             with torch.no_grad():  # for pytorch<1.9
                 pred = self.detector(images)[0]
 
-        bboxes, points = self._postprocess(
-            images, origimgs, pred, conf_thres, iou_thres
-        )
+        bboxes, points = self._postprocess(images, origimgs, pred, conf_thres, iou_thres)
 
         # return bboxes, points
         if not isListempty(points):

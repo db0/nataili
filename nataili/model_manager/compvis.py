@@ -24,14 +24,15 @@ from omegaconf import OmegaConf
 from torch import nn
 
 from ldm.util import instantiate_from_config
-
-from ..util import logger, push_model_to_plasma
-from .base import BaseModelManager
+from nataili.model_manager.base import BaseModelManager
+from nataili.util.logger import logger
+from nataili.util.voodoo import push_model_to_plasma
 
 
 class CompVisModelManager(BaseModelManager):
     def __init__(self, download_reference=True, custom_path="models/custom"):
         super().__init__()
+        self.download_reference = download_reference
         self.path = f"{Path.home()}/.cache/nataili/compvis"
         self.custom_path = custom_path
         self.models_db_name = "stable_diffusion"
@@ -130,7 +131,9 @@ class CompVisModelManager(BaseModelManager):
                 ckpt_path = f"{self.custom_path}/{file}"
                 config_path = ckpt_path.replace(".ckpt", ".yaml")
                 self.load_custom(
-                    ckpt_path, config_path, replace=replace,
+                    ckpt_path,
+                    config_path,
+                    replace=replace,
                 )
 
     def load_compvis(

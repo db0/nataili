@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from .common import Conv
+from nataili.util.codeformer.facelib.detection.yolov5face.models.common import Conv
 
 
 class CrossConv(nn.Module):
@@ -35,16 +35,9 @@ class MixConv2d(nn.Module):
             a -= np.roll(a, 1, axis=1)
             a *= np.array(k) ** 2
             a[0] = 1
-            c_ = np.linalg.lstsq(a, b, rcond=None)[
-                0
-            ].round()  # solve for equal weight indices, ax = b
+            c_ = np.linalg.lstsq(a, b, rcond=None)[0].round()  # solve for equal weight indices, ax = b
 
-        self.m = nn.ModuleList(
-            [
-                nn.Conv2d(c1, int(c_[g]), k[g], s, k[g] // 2, bias=False)
-                for g in range(groups)
-            ]
-        )
+        self.m = nn.ModuleList([nn.Conv2d(c1, int(c_[g]), k[g], s, k[g] // 2, bias=False) for g in range(groups)])
         self.bn = nn.BatchNorm2d(c2)
         self.act = nn.LeakyReLU(0.1, inplace=True)
 

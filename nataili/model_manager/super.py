@@ -15,15 +15,14 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from nataili.util import logger
-
-from .aitemplate import AITemplateModelManager
-from .blip import BlipModelManager
-from .clip import ClipModelManager
-from .codeformer import CodeFormerModelManager
-from .compvis import CompVisModelManager
-from .esrgan import EsrganModelManager
-from .gfpgan import GfpganModelManager
+from nataili.model_manager.aitemplate import AITemplateModelManager
+from nataili.model_manager.blip import BlipModelManager
+from nataili.model_manager.clip import ClipModelManager
+from nataili.model_manager.codeformer import CodeFormerModelManager
+from nataili.model_manager.compvis import CompVisModelManager
+from nataili.model_manager.esrgan import EsrganModelManager
+from nataili.model_manager.gfpgan import GfpganModelManager
+from nataili.util.logger import logger
 
 
 class ModelManager:

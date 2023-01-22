@@ -6,11 +6,8 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision.models._utils import IntermediateLayerGetter as IntermediateLayerGetter
 
-from ...detection.align_trans import (
-    get_reference_facial_points,
-    warp_and_crop_face,
-)
-from ...detection.retinaface.retinaface_net import (
+from nataili.util.codeformer.facelib.detection.align_trans import get_reference_facial_points, warp_and_crop_face
+from nataili.util.codeformer.facelib.detection.retinaface.retinaface_net import (
     FPN,
     SSH,
     MobileNetV1,
@@ -18,7 +15,7 @@ from ...detection.retinaface.retinaface_net import (
     make_class_head,
     make_landmark_head,
 )
-from ...detection.retinaface.retinaface_utils import (
+from nataili.util.codeformer.facelib.detection.retinaface.retinaface_utils import (
     PriorBox,
     batched_decode,
     batched_decode_landm,
@@ -143,12 +140,8 @@ class RetinaFace(nn.Module):
         feature3 = self.ssh3(fpn[2])
         features = [feature1, feature2, feature3]
 
-        bbox_regressions = torch.cat(
-            [self.BboxHead[i](feature) for i, feature in enumerate(features)], dim=1
-        )
-        classifications = torch.cat(
-            [self.ClassHead[i](feature) for i, feature in enumerate(features)], dim=1
-        )
+        bbox_regressions = torch.cat([self.BboxHead[i](feature) for i, feature in enumerate(features)], dim=1)
+        classifications = torch.cat([self.ClassHead[i](feature) for i, feature in enumerate(features)], dim=1)
         tmp = [self.LandmarkHead[i](feature) for i, feature in enumerate(features)]
         ldm_regressions = torch.cat(tmp, dim=1)
 
@@ -165,9 +158,7 @@ class RetinaFace(nn.Module):
     def __detect_faces(self, inputs):
         # get scale
         height, width = inputs.shape[2:]
-        self.scale = torch.tensor(
-            [width, height, width, height], dtype=torch.float32
-        ).to(self.device)
+        self.scale = torch.tensor([width, height, width, height], dtype=torch.float32).to(self.device)
         tmp = [
             width,
             height,
@@ -213,9 +204,7 @@ class RetinaFace(nn.Module):
 
         # resize
         if resize != 1:
-            image = cv2.resize(
-                image, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR
-            )
+            image = cv2.resize(image, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
 
         # convert to torch.tensor format
         # image -= (104, 117, 123)
@@ -262,9 +251,7 @@ class RetinaFace(nn.Module):
         boxes, landmarks, scores = boxes[order], landmarks[order], scores[order]
 
         # do NMS
-        bounding_boxes = np.hstack((boxes, scores[:, np.newaxis])).astype(
-            np.float32, copy=False
-        )
+        bounding_boxes = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
         keep = py_cpu_nms(bounding_boxes, nms_threshold)
         bounding_boxes, landmarks = bounding_boxes[keep, :], landmarks[keep]
         # self.t['forward_pass'].toc()
@@ -286,9 +273,7 @@ class RetinaFace(nn.Module):
         for landmark in landmarks:
             facial5points = [[landmark[2 * j], landmark[2 * j + 1]] for j in range(5)]
 
-            warped_face = warp_and_crop_face(
-                np.array(image), facial5points, self.reference, crop_size=(112, 112)
-            )
+            warped_face = warp_and_crop_face(np.array(image), facial5points, self.reference, crop_size=(112, 112))
             faces.append(warped_face)
 
         return np.concatenate((boxes, landmarks), axis=1), faces
@@ -312,9 +297,7 @@ class RetinaFace(nn.Module):
 
         # convert to opencv format
         if from_PIL:
-            frames = [
-                cv2.cvtColor(np.asarray(frame), cv2.COLOR_RGB2BGR) for frame in frames
-            ]
+            frames = [cv2.cvtColor(np.asarray(frame), cv2.COLOR_RGB2BGR) for frame in frames]
             frames = np.asarray(frames, dtype=np.float32)
 
         # testing scale
@@ -353,9 +336,7 @@ class RetinaFace(nn.Module):
 
         return frames, resize
 
-    def batched_detect_faces(
-        self, frames, conf_threshold=0.8, nms_threshold=0.4, use_origin_size=True
-    ):
+    def batched_detect_faces(self, frames, conf_threshold=0.8, nms_threshold=0.4, use_origin_size=True):
         """
         Arguments:
             frames: a list of PIL.Image, or np.array(shape=[n, h, w, c],
@@ -379,16 +360,8 @@ class RetinaFace(nn.Module):
 
         # decode
         priors = priors.unsqueeze(0)
-        b_loc = (
-            batched_decode(b_loc, priors, self.cfg["variance"])
-            * self.scale
-            / self.resize
-        )
-        b_landmarks = (
-            batched_decode_landm(b_landmarks, priors, self.cfg["variance"])
-            * self.scale1
-            / self.resize
-        )
+        b_loc = batched_decode(b_loc, priors, self.cfg["variance"]) * self.scale / self.resize
+        b_landmarks = batched_decode_landm(b_landmarks, priors, self.cfg["variance"]) * self.scale1 / self.resize
         b_conf = b_conf[:, :, 1]
 
         # index for selection

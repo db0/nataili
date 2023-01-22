@@ -1,20 +1,20 @@
-import numpy as np
-import torch
-import torchvision
 from itertools import product as product
 from math import ceil
 
+import numpy as np
+import torch
+import torchvision
+
 
 class PriorBox(object):
-
-    def __init__(self, cfg, image_size=None, phase='train'):
+    def __init__(self, cfg, image_size=None, phase="train"):
         super(PriorBox, self).__init__()
-        self.min_sizes = cfg['min_sizes']
-        self.steps = cfg['steps']
-        self.clip = cfg['clip']
+        self.min_sizes = cfg["min_sizes"]
+        self.steps = cfg["steps"]
+        self.clip = cfg["clip"]
         self.image_size = image_size
         self.feature_maps = [[ceil(self.image_size[0] / step), ceil(self.image_size[1] / step)] for step in self.steps]
-        self.name = 's'
+        self.name = "s"
 
     def forward(self):
         anchors = []
@@ -48,36 +48,29 @@ def py_cpu_nms(dets, thresh):
 
 
 def point_form(boxes):
-    """ Convert prior_boxes to (xmin, ymin, xmax, ymax)
+    """Convert prior_boxes to (xmin, ymin, xmax, ymax)
     representation for comparison to point form ground truth data.
     Args:
         boxes: (tensor) center-size default boxes from priorbox layers.
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat(
-        (
-            boxes[:, :2] - boxes[:, 2:] / 2,  # xmin, ymin
-            boxes[:, :2] + boxes[:, 2:] / 2),
-        1)  # xmax, ymax
+    return torch.cat((boxes[:, :2] - boxes[:, 2:] / 2, boxes[:, :2] + boxes[:, 2:] / 2), 1)  # xmin, ymin  # xmax, ymax
 
 
 def center_size(boxes):
-    """ Convert prior_boxes to (cx, cy, w, h)
+    """Convert prior_boxes to (cx, cy, w, h)
     representation for comparison to center-size form ground truth data.
     Args:
         boxes: (tensor) point_form boxes
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat(
-        (boxes[:, 2:] + boxes[:, :2]) / 2,  # cx, cy
-        boxes[:, 2:] - boxes[:, :2],
-        1)  # w, h
+    return torch.cat((boxes[:, 2:] + boxes[:, :2]) / 2, boxes[:, 2:] - boxes[:, :2], 1)  # cx, cy  # w, h
 
 
 def intersect(box_a, box_b):
-    """ We resize both tensors to [A,B,2] without new malloc:
+    """We resize both tensors to [A,B,2] without new malloc:
     [A,2] -> [A,1,2] -> [A,B,2]
     [B,2] -> [1,B,2] -> [A,B,2]
     Then we compute the area of intersect between box_a and box_b.
@@ -213,7 +206,7 @@ def encode(matched, priors, variances):
     # dist b/t match center and prior's center
     g_cxcy = (matched[:, :2] + matched[:, 2:]) / 2 - priors[:, :2]
     # encode variance
-    g_cxcy /= (variances[0] * priors[:, 2:])
+    g_cxcy /= variances[0] * priors[:, 2:]
     # match wh / prior wh
     g_wh = (matched[:, 2:] - matched[:, :2]) / priors[:, 2:]
     g_wh = torch.log(g_wh) / variances[1]
@@ -243,7 +236,7 @@ def encode_landm(matched, priors, variances):
     priors = torch.cat([priors_cx, priors_cy, priors_w, priors_h], dim=2)
     g_cxcy = matched[:, :, :2] - priors[:, :, :2]
     # encode variance
-    g_cxcy /= (variances[0] * priors[:, :, 2:])
+    g_cxcy /= variances[0] * priors[:, :, 2:]
     # g_cxcy /= priors[:, :, 2:]
     g_cxcy = g_cxcy.reshape(g_cxcy.size(0), -1)
     # return target for smooth_l1_loss
@@ -264,8 +257,13 @@ def decode(loc, priors, variances):
         decoded bounding box predictions
     """
 
-    boxes = torch.cat((priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
-                       priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])), 1)
+    boxes = torch.cat(
+        (
+            priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
+            priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1]),
+        ),
+        1,
+    )
     boxes[:, :2] -= boxes[:, 2:] / 2
     boxes[:, 2:] += boxes[:, :2]
     return boxes

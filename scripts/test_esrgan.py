@@ -1,16 +1,18 @@
 import time
 
-import PIL
+from PIL import Image
 
-from nataili import ModelManager, esrgan, logger
+from nataili.model_manager.esrgan import EsrganModelManager
+from nataili.esrgan import esrgan
+from nataili.util.logger import logger
 
-image = PIL.Image.open("01.png").convert("RGB")
+image = Image.open("01.png").convert("RGB")
 
-mm = ModelManager()
+mm = EsrganModelManager()
 
-mm.esrgan.load("RealESRGAN_x4plus")
+mm.load("RealESRGAN_x4plus")
 
-upscaler = esrgan(mm.esrgan.loaded_models["RealESRGAN_x4plus"])
+upscaler = esrgan(mm.loaded_models["RealESRGAN_x4plus"])
 
 for i in range(10):
     tick = time.time()

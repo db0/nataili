@@ -14,8 +14,8 @@ from timm.models.hub import download_cached_file
 from torch import nn
 from transformers import BertTokenizer
 
-from .med import BertConfig, BertLMHeadModel, BertModel
-from .vit import VisionTransformer, interpolate_pos_embed
+from nataili.util.blip.med import BertConfig, BertLMHeadModel, BertModel
+from nataili.util.blip.vit import VisionTransformer, interpolate_pos_embed
 
 warnings.filterwarnings("ignore")
 
