@@ -15,6 +15,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import os
 import time
 from pathlib import Path
 
@@ -29,9 +30,10 @@ from .base import BaseModelManager
 
 
 class CompVisModelManager(BaseModelManager):
-    def __init__(self, download_reference=True):
+    def __init__(self, download_reference=True, custom_path="models/custom"):
         super().__init__()
         self.path = f"{Path.home()}/.cache/nataili/compvis"
+        self.custom_path = custom_path
         self.models_db_name = "stable_diffusion"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.init()
@@ -87,6 +89,46 @@ class CompVisModelManager(BaseModelManager):
                 m._orig_padding_mode = m.padding_mode
         del pl_sd, sd, m, u
         return model
+
+    def load_custom(self, ckpt_path, config_path, model_name=None, replace=False):
+        if not os.path.isfile(ckpt_path):
+            logger.error(f"{ckpt_path} not found")
+            return
+        if not os.path.isfile(config_path):
+            logger.error(f"{config_path} not found")
+            return
+        if not ckpt_path.endswith(".ckpt"):
+            logger.error(f"{ckpt_path} is not a valid checkpoint file")
+            return
+        if not config_path.endswith(".yaml"):
+            logger.error(f"{config_path} is not a valid config file")
+            return
+        if model_name is None:
+            model_name = os.path.basename(ckpt_path).replace(".ckpt", "")
+        if model_name not in self.models or replace:
+            self.models[model_name] = {
+                "name": model_name,
+                "type": "ckpt",
+                "description": f"custom model {model_name}",
+                "config": {
+                    "files": [
+                        {"path": f"{self.custom_path}/{model_name}.ckpt"},
+                        {"path": f"{self.custom_path}/{model_name}.yaml"},
+                    ]
+                },
+                "available": True,
+            }
+            self.available_models.append(model_name)
+
+    def load_available_models_from_custom(self, replace=False):
+        # ckpt files and matching config yaml files
+        for file in os.listdir(self.custom_path):
+            if file.endswith(".ckpt"):
+                ckpt_path = f"{self.custom_path}/{file}"
+                config_path = ckpt_path.replace(".ckpt", ".yaml")
+                self.load_custom(
+                    ckpt_path, config_path, replace=replace,
+                )
 
     def load_compvis(
         self,
