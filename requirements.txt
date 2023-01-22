@@ -1,6 +1,5 @@
 torch>=1.12.0+cu113
 ray
-invisible-watermark
 taming-transformers-rom1504
 k-diffusion @ git+https://github.com/crowsonkb/k-diffusion.git
 omegaconf
@@ -22,13 +21,10 @@ realesrgan
 basicsr
 gfpgan
 realesrgan
-latent-diffusion @ git+https://github.com/CompVis/latent-diffusion
-codeformer-perceptor
 loguru
-tensorflow==2.9.0
-torch-fidelity
-bitsandbytes==0.35.0
-pytorch_lightning==1.7.6
-transformers==4.25.1
-accelerate==0.15.0
+tensorflow
+bitsandbytes
+pytorch_lightning
+transformers
+accelerate
 pydantic

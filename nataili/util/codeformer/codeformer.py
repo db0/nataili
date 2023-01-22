@@ -1,5 +1,5 @@
 """
-Small modification of CodeFormer from CodeFormer repo.
+Small modification of CodeFormer from  repo.
 Uses RealESRGAN x2 from ESRGAN ModelManager.
 Allows cache dir to be specified.
 Allows device to be specified. NOTE: Device selection seems funky, high CPU usage even when using cuda.
@@ -11,12 +11,12 @@ import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from basicsr.utils import img2tensor, tensor2img
 from basicsr.utils.registry import ARCH_REGISTRY
-from codeformer.facelib.utils.misc import is_gray
 from PIL import Image
 from realesrgan import RealESRGANer
 from torchvision.transforms.functional import normalize
 
 from .face_restoration_helper import FaceRestoreHelper
+from .misc import is_gray
 
 
 class CodeFormer(torch.nn.Module):

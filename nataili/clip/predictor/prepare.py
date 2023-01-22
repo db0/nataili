@@ -28,8 +28,9 @@ class PredictorPrepare:
         model_name: Literal["ViT-L/14", "ViT-H-14"] = "ViT-L/14",
         input_directory: str = "input",
         output_directory: str = "output",
-        rating_source: str = "directory",
+        rating_source: str = "none",
         rating_type: Literal["float", "string"] = "float",
+        x_only: bool = False,
     ):
         """
         :param model_name: Name of model to use
@@ -46,35 +47,58 @@ class PredictorPrepare:
         self.cache_image = Cache(self.model_name, cache_parentname="embeds", cache_subname="image")
         self.text_embed = TextEmbed(self.model_manager.loaded_models[self.model_name], self.cache_text)
         self.image_embed = ImageEmbed(self.model_manager.loaded_models[self.model_name], self.cache_image)
-
         if rating_source == "directory":
-            self._prepare_from_directory(input_directory=input_directory, rating_type=rating_type)
+            self._prepare_from_directory(input_directory=input_directory, rating_type=rating_type, x_only=x_only)
         elif rating_source == "filename":
-            self._prepare_from_filename(input_directory=input_directory, rating_type=rating_type)
+            self._prepare_from_filename(input_directory=input_directory, rating_type=rating_type, x_only=x_only)
+        elif rating_source == "none":
+            self._x_only(input_directory=input_directory)
         else:
             raise NotImplementedError
         try:
             self.x = np.vstack(self.x)
         except Exception:
-            raise Exception("Could not stack x")
+            logger.error("Could not stack x")
+            exit(1)
         try:
             self.y = np.vstack(self.y)
         except Exception:
-            raise Exception("Could not stack y")
+            logger.error("Could not stack y")
+            exit(1)
         logger.info(f"Shape of x: {self.x.shape}")
         logger.info(f"Shape of y: {self.y.shape}")
+        if not os.path.exists(output_directory):
+            logger.info(f"Creating output directory: {output_directory}")
+            os.makedirs(output_directory)
         logger.info(f"Saving x to {output_directory}/x.npy")
         try:
             np.save(f"{output_directory}/x.npy", self.x)
         except Exception:
-            raise Exception(f"Could not save x to {output_directory}/x.npy")
-        logger.info(f"Saving y to {output_directory}/y.npy")
-        try:
-            np.save(f"{output_directory}/y.npy", self.y)
-        except Exception:
-            raise Exception(f"Could not save y to {output_directory}/y.npy")
+            logger.error(f"Could not save x to {output_directory}/x.npy")
+            exit(1)
+        if not x_only:
+            logger.info(f"Saving y to {output_directory}/y.npy")
+            try:
+                np.save(f"{output_directory}/y.npy", self.y)
+            except Exception:
+                logger.error(f"Could not save y to {output_directory}/y.npy")
+                exit(1)
 
-    def _prepare_from_filename(self, input_directory: str, rating_type: Literal["float", "string"] = "float"):
+    def _x_only(self, input_directory: str):
+        """
+        :param input_directory: Directory to read input from
+        """
+        for file in os.listdir(input_directory):
+            if not os.path.splitext(file)[1].lower() in [".jpg", ".jpeg", ".png", ".webp"]:
+                continue
+            file_path = os.path.join(input_directory, file)
+            if os.path.isfile(file_path):
+                image_features = self._image_features(file_path)
+                if image_features is None:
+                    return
+                self.x.append(normalized(image_features))
+
+    def _prepare_from_filename(self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
         """
         :param input_directory: Directory to read input from
         """
@@ -88,11 +112,11 @@ class PredictorPrepare:
                 if os.path.exists(rating_file_path):
                     with open(rating_file_path, "r") as f:
                         rating = f.read()
-                        self._prepare_from_file(file_path=file_path, rating=rating)
+                        self._prepare_from_file(file_path=file_path, rating=rating, rating_type=rating_type, x_only=x_only)
                 else:
                     logger.warning(f"Could not find rating file {rating_file_path}")
 
-    def _prepare_from_directory(self, input_directory: str, rating_type: Literal["float", "string"] = "float"):
+    def _prepare_from_directory(self, input_directory: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
         """
         :param input_directory: Directory to read input from
         """
@@ -103,22 +127,27 @@ class PredictorPrepare:
                 for file in os.listdir(directory_path):
                     file_path = os.path.join(directory_path, file)
                     if os.path.isfile(file_path):
-                        self._prepare_from_file(file_path=file_path, rating=directory, rating_type=rating_type)
+                        self._prepare_from_file(file_path=file_path, rating=directory, rating_type=rating_type, x_only=x_only)
 
-    def _prepare_from_file(self, file_path: str, rating: str, rating_type: Literal["float", "string"] = "float"):
+    def _prepare_from_file(self, file_path: str, rating: str, rating_type: Literal["float", "string"] = "float", x_only: bool = False):
         """
         :param file_path: Path to file to prepare
         :param rating: Rating to use for file
         """
-        if rating_type == "float":
-            try:
-                rating = float(rating)
-                logger.debug(f"Converted rating {rating} to float")
-            except Exception:
-                raise Exception(f"Could not parse rating {rating} as float")
-        logger.info(f"Processing file: {file_path} with rating {rating}")
-        self.x.append(normalized(self._image_features(file_path)))
-        self.y.append(self._y(rating))
+        image_features = self._image_features(file_path)
+        if image_features is None:
+            return
+        self.x.append(normalized(image_features))
+        if not x_only:
+            if rating_type == "float":
+                try:
+                    rating = float(rating)
+                    logger.debug(f"Converted rating {rating} to float")
+                except Exception:
+                    logger.error(f"Could not parse rating {rating} as float")
+                    return
+            logger.info(f"Processing file: {file_path} with rating {rating}")
+            self.y.append(self._y(rating))
 
     def _image_features(self, image: Union[str, Image.Image]):
         """
@@ -131,13 +160,14 @@ class PredictorPrepare:
                 try:
                     image = Image.open(image)
                 except Exception:
-                    raise Exception(f"Could not open image {image}")
+                    logger.error(f"Could not open image {image}")
+                    return None
             else:
-                raise Exception(f"Could not find image {image}")
+                logger.error(f"Could not find image {image}")
+                return None
         image = image.convert("RGB")
         image_hash = self.image_embed(image)
-        self.cache_image.flush()
-        image_embed_array = np.load(f"{self.cache_image.cache_dir}/{self.cache_image.kv[image_hash]}.npy")
+        image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
         return image_embed_array
 
     def _y(self, rating: Union[str, float]):
