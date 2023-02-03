@@ -56,16 +56,25 @@ class BaseModelManager:
         )
         self.download_reference = download_reference
 
-    def init(self):
+    def init(self, list_models=False):
         if self.download_reference:
             self.models = self.download_model_reference()
+            logger.info(f"Downloaded model reference. Got {len(self.models)} models.")
         else:
             self.models = json.loads((self.models_path).read_text())
+            logger.info(f"Loaded model reference. Got {len(self.models)} models.")
+        if list_models:
+            for model in self.models:
+                logger.info(model)
         models_available = []
         for model in self.models:
             if self.check_model_available(model):
                 models_available.append(model)
         self.available_models = models_available
+        logger.info(f"Got {len(self.available_models)} available models.")
+        if list_models:
+            for model in self.available_models:
+                logger.info(model)
 
     def download_model_reference(self):
         try:

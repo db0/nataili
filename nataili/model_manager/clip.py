@@ -37,7 +37,7 @@ class ClipModelManager(BaseModelManager):
         self.remote_db = (
             f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
         )
-        self.init()
+        self.init(list_models=True)
 
     def load_data_lists(self):
         data_lists = {}
@@ -49,6 +49,29 @@ class ClipModelManager(BaseModelManager):
         data_lists["techniques"] = load_list(self.pkg / "techniques.txt")
         data_lists["tags"] = load_list(self.pkg / "tags.txt")
         return data_lists
+
+    def load_coca(self, model_name, half_precision=True, gpu_id=0, cpu_only=False):
+        if cpu_only:
+            device = torch.device("cpu")
+            half_precision = False
+        else:
+            device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
+        model, _, transform = open_clip.create_model_and_transforms(
+            "coca_ViT-L-14",
+            pretrained="laion2B-s13B-b90k-mscoco-2014.pt",
+            device=device,
+        )
+        model = model.eval()
+        model.to(device)
+        if half_precision:
+            model = model.half()
+        return {
+            "model": model,
+            "device": device,
+            "transform": transform,
+            "half_precision": half_precision,
+            "cache_name": model_name.replace("/", "_"),
+        }
 
     def load_open_clip(self, model_name, half_precision=True, gpu_id=0, cpu_only=False):
         pretrained = self.get_model(model_name)["pretrained_name"]
@@ -116,6 +139,8 @@ class ClipModelManager(BaseModelManager):
                 self.loaded_models[model_name] = self.load_open_clip(model_name, half_precision, gpu_id, cpu_only)
             elif self.models[model_name]["type"] == "clip":
                 self.loaded_models[model_name] = self.load_clip(model_name, half_precision, gpu_id, cpu_only)
+            elif self.models[model_name]["type"] == "coca":
+                self.loaded_models[model_name] = self.load_coca(model_name, half_precision, gpu_id, cpu_only)
             else:
                 logger.error(f"Unknown model type: {self.models[model_name]['type']}")
                 return

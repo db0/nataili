@@ -18,9 +18,28 @@
 		},
 		"available": false
 	},
-    "ViT-G-14": {
-		"name": "ViT-G-14",
-		"pretrained_name": "laion2B_39b_b160k",
+    "coca_ViT-L-14": {
+		"name": "coca_ViT-L-14",
+		"type": "coca",
+		"config": {
+			"files": [
+				{
+					"path": "laion2B-s13B-b90k-mscoco-2014.pt"
+				}
+			],
+			"download": [
+				{
+					"file_name": "laion2B-s13B-b90k-mscoco-2014.pt",
+					"file_path": "",
+					"file_url": "https://huggingface.co/spaces/gpucce/CoCa/resolve/main/laion2B-s13B-b90k-mscoco-2014.pt"
+				}
+			]
+		},
+		"available": false
+	},
+    "ViT-bigG-14": {
+		"name": "ViT-bigG-14",
+		"pretrained_name": "laion2b_s39b_b160k",
 		"type": "open_clip",
 		"config": {
 			"files": [
