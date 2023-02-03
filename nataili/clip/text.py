@@ -36,15 +36,16 @@ class TextEmbed:
         self.cache = cache
 
     @autocast_cuda
-    def __call__(self, text: str):
+    def __call__(self, text: str, check_cache: bool = False):
         """
         :param text: Text to embed
         If text is not in cache, embed it and save it to cache
         """
         text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        cached = self.cache.get(file=text)
-        if cached:
-            return cached
+        if check_cache:
+            cached = self.cache.get(file_hash=text_hash)
+            if cached:
+                return cached
         text_tokens = clip.tokenize([text]).cuda()
         with torch.no_grad():
             text_features = self.model["model"].encode_text(text_tokens).float()

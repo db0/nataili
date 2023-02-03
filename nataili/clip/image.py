@@ -90,3 +90,4 @@ class ImageEmbed:
         image_embed_array = image_features.cpu().detach().numpy()
         np.save(f"{self.cache.cache_dir}/{image_hash}", image_embed_array)
         self.cache.add_sqlite_row(file=filename, hash=file_hash, pil_hash=image_hash)
+        return image_hash

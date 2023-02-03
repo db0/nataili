@@ -49,25 +49,30 @@ class Interrogator:
         If individual is True, self.embed_lists[key] will be a dict with text as key and embed as value.
         If individual is False, self.embed_lists[key] will be a tensor of all text embeds concatenated.
         """
+        logger.info(f"key: {key}, text_array: {text_array}, individual: {individual}")
         cached = True
         for text in text_array:
-            if self.cache.get(file=text) is None:
+            text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            if self.cache.get(file_hash=text_hash) is None:
                 cached = False
+                logger.info(f"{text} not cached")
                 break
         if not cached:
+            logger.info(f"Embedding {key}...")
             text_embed = TextEmbed(self.model, self.cache)
             for text in text_array:
+                logger.info(f"Embedding {text}")
                 text_embed(text)
         else:
-            logger.debug(f"{key} embeds already cached")
-        logger.debug(f"Loading {key} embeds")
+            logger.info(f"{key} embeds already cached")
+        logger.info(f"Loading {key} embeds")
         if individual:
             self.embed_lists[key] = {}
             for text in text_array:
                 text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-                self.embed_lists[key][text] = torch.from_numpy(
-                    np.load(f"{self.cache.cache_dir}/{text_hash}.npy")
-                ).float()
+                filename = f"{self.cache.cache_dir}/{text_hash}.npy"
+                logger.info(f"text: {text}, text_hash: {text_hash}, filename: {filename}")
+                self.embed_lists[key][text] = torch.from_numpy(np.load(filename)).float()
         else:
             with torch.no_grad():
                 text_features = torch.cat(
@@ -133,7 +138,10 @@ class Interrogator:
         :return: dict of {text: similarity}
         """
         if key not in self.embed_lists:
+            logger.info(f"Loading {key} embeds")
             self.load(key, text_array, individual=True)
+        logger.info(f"{len(text_array)} text_array: {text_array}")
+        logger.info(f"{len(self.embed_lists[key])} embed_lists[key]: {self.embed_lists[key]}")
         similarity = {}
         for text in text_array:
             text_features = self.embed_lists[key][text].to(device)
