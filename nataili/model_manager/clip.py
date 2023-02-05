@@ -51,6 +51,8 @@ class ClipModelManager(BaseModelManager):
         return data_lists
 
     def load_coca(self, model_name, half_precision=True, gpu_id=0, cpu_only=False):
+        model_path = self.get_model_files(model_name)[0]["path"]
+        model_path = f"{self.path}/{model_path}"
         if cpu_only:
             device = torch.device("cpu")
             half_precision = False
@@ -58,7 +60,7 @@ class ClipModelManager(BaseModelManager):
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         model, _, transform = open_clip.create_model_and_transforms(
             "coca_ViT-L-14",
-            pretrained="laion2B-s13B-b90k-mscoco-2014.pt",
+            pretrained=model_path,
             device=device,
         )
         model = model.eval()

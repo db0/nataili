@@ -2,8 +2,8 @@ import time
 
 from PIL import Image
 
-from nataili.model_manager.codeformer import CodeFormerModelManager
 from nataili.codeformers import codeformers
+from nataili.model_manager.codeformer import CodeFormerModelManager
 from nataili.util.logger import logger
 
 image = Image.open("01.png").convert("RGB")

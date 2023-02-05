@@ -1,6 +1,6 @@
+from nataili.aitemplate import AITemplate
 from nataili.model_manager.aitemplate import AITemplateModelManager
 from nataili.util.logger import logger
-from nataili.aitemplate import AITemplate
 
 mm = AITemplateModelManager()
 

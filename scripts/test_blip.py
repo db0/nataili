@@ -1,10 +1,10 @@
 from PIL import Image
 
-from nataili.model_manager.blip import BlipModelManager
 from nataili.blip import Caption
+from nataili.model_manager.blip import BlipModelManager
 from nataili.util.logger import logger
 
-image = Image.open("test.png")
+image = Image.open("01.png")
 
 mm = BlipModelManager()
 

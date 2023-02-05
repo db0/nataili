@@ -1,8 +1,9 @@
 import time
+
 from PIL import Image
 
-from nataili.model_manager.gfpgan import GfpganModelManager
 from nataili.gfpgan import gfpgan
+from nataili.model_manager.gfpgan import GfpganModelManager
 from nataili.util.logger import logger
 
 image = Image.open("01.png").convert("RGB")
