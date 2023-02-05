@@ -22,10 +22,10 @@ from typing import Literal
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-import wandb
 from nataili.clip.predictor.mlp import MLP
 from nataili.util.logger import logger
 

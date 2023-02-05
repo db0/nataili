@@ -13,7 +13,7 @@ src = [
 
 ignore_src = [
     "nataili/model_manager/new.py",
-    "nataili/clip/predictor/train.py", #annoying isort thing
+    "nataili/clip/predictor/train.py",  # annoying isort thing
     "nataili/util/blip/vit.py",
     "nataili/util/blip/med.py",
 ]
