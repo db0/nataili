@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 import torch
-from diffusers import StableDiffusionDepth2ImgPipeline, StableDiffusionInpaintPipeline
+from diffusers.pipelines import StableDiffusionDepth2ImgPipeline, StableDiffusionInpaintPipeline
 
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger

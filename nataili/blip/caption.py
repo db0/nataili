@@ -15,7 +15,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import PIL
+from PIL import Image
 import torch
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
@@ -40,8 +40,10 @@ class Caption:
         top_p: The top p to use. This is only used if sample is True.
         repetition_penalty: The repetition penalty to use. This is only used if sample is True.
         """
-        if not isinstance(image, PIL.Image.Image):
-            image = PIL.Image.open(image).convert("RGB")
+        if not isinstance(image, Image.Image):
+            image = Image.open(image).convert("RGB")
+        else:
+            image = image.convert("RGB")
         gpu_image = (
             transforms.Compose(
                 [

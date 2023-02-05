@@ -17,6 +17,7 @@ from torchvision.transforms.functional import normalize
 
 from nataili.util.codeformer.face_restoration_helper import FaceRestoreHelper
 from nataili.util.codeformer.misc import is_gray
+from nataili.util.codeformer.codeformer_arch import CodeFormer as CodeFormer_Arch
 
 
 class CodeFormer(torch.nn.Module):
@@ -40,6 +41,8 @@ class CodeFormer(torch.nn.Module):
             bg_tile (int): tile size for background upsampling. Default: 400
         """
         super().__init__()
+        self.esrgan_model_manager = esrgan_model_manager
+        self.gfpgan_model_manager = gfpgan_model_manager
         self.upscale = upscale
         self.detection_model = detection_model
         self.bg_tile = bg_tile
@@ -70,7 +73,7 @@ class CodeFormer(torch.nn.Module):
         else:
             self.bg_upsampler = None
 
-        self.model = ARCH_REGISTRY.get("CodeFormer")(
+        self.model = CodeFormer_Arch(
             dim_embd=512,
             codebook_size=1024,
             n_head=8,
@@ -115,6 +118,13 @@ class CodeFormer(torch.nn.Module):
         only_center_face=False,
         draw_face_bounding_box=False,
     ) -> Image.Image:
+        self.face_helper.all_landmarks_5 = []
+        self.face_helper.det_faces = []
+        self.face_helper.affine_matrices = []
+        self.face_helper.inverse_affine_matrices = []
+        self.face_helper.cropped_faces = []
+        self.face_helper.restored_faces = []
+        self.face_helper.pad_input_imgs = []
         img = np.array(pil_image)
 
         if has_aligned:

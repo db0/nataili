@@ -56,8 +56,8 @@ class Cache:
         if cache_subname:
             self.cache_dir = os.path.join(self.cache_dir, cache_subname)
         self.cache_db = os.path.join(self.cache_dir, "cache.db")
-        logger.info(f"Cache file: {self.cache_db}")
-        logger.info(f"Cache dir: {self.cache_dir}")
+        logger.debug(f"Cache file: {self.cache_db}")
+        logger.debug(f"Cache dir: {self.cache_dir}")
         os.makedirs(self.cache_dir, exist_ok=True)
         self.conn = sqlite3.connect(self.cache_db)
         self.cursor = self.conn.cursor()
@@ -146,44 +146,14 @@ class Cache:
                 file_hashes.append(file_hash)
         return pil_hashes, file_hashes
 
-    def rebuild_image_cache(self, input_directory):
-        """
-        Rebuild the image cache if it gets corrupted
-        For file in input_directory: sha256 hash of file
-        Check for npy with hash in cache_dir
-        If npy exists: add to cache
-        """
-        self.create_sqlite_db()
-        count = 0
-        files = self.list_dir(input_directory, extensions=[".webp"])
-        pil_hashes, file_hashes = self.hash_files(files, input_directory, extensions=[".webp"])
-        cache_dir_files = self.list_dir(self.cache_dir, extensions=[".npy"])
-        logger.info(f"Cache dir files: {len(cache_dir_files)}")
-        logger.info(f"Files: {len(files)}")
-        logger.info(f"PIL hashes: {len(pil_hashes)}")
-        logger.info(f"File hashes: {len(file_hashes)}")
-        # set()
-        # cache_dir_files without pil_hashes and file_hashes = missing
-        # to_readd = cache_dir_files - missing
-        missing = set(cache_dir_files) - set(pil_hashes) - set(file_hashes)
-        logger.info(f"Missing {len(missing)} files")
-        to_readd = set(cache_dir_files) - missing
-        logger.info(f"Readding {len(to_readd)} files")
-        # files length and pil_hashes length and file_hashes and to_readd length should be the same
-        # if not, then something is wrong
-        # add every file to cache
-        hashed_files = []
-        for file, pil_hash, file_hash in zip(files, pil_hashes, file_hashes):
-            hashed_files.append({"file": file, "hash": file_hash, "pil_hash": pil_hash})
-        json.dump(hashed_files, open(os.path.join(self.cache_dir, "hashed_files.json"), "w"))
-        self.populate_sqlite_db(hashed_files)
-        logger.info(f"Rebuilt cache with {len(to_readd)} images")
-
     def create_sqlite_db(self):
         """
         Create a sqlite database from the cache
         """
         self.cursor.execute("CREATE TABLE IF NOT EXISTS cache (file text, hash text, pil_hash text)")
+        self.cursor.execute("CREATE INDEX IF NOT EXISTS file_index ON cache (file)")
+        self.cursor.execute("CREATE INDEX IF NOT EXISTS hash_index ON cache (hash)")
+        self.cursor.execute("CREATE INDEX IF NOT EXISTS pil_hash_index ON cache (pil_hash)")
         self.conn.commit()
 
     def add_sqlite_row(self, file: str, hash: str, pil_hash: str, commit=True):

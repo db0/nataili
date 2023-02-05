@@ -6,8 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
-
-scripts/
+scripts/*.jpg
+**/*.pth
+**/*.pt
 wandb/
 
 # Distribution / packaging
