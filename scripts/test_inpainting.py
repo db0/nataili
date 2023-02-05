@@ -8,9 +8,7 @@ mm = DiffusersModelManager(download_reference=False)
 
 model = "stable_diffusion_inpainting"
 
-logger.init(f"Model: {model}", status="Loading")
 success = mm.load(model)
-logger.init_ok(f"Loading {model}", status=success)
 
 original = Image.open("./inpaint_original.png")
 mask = Image.open("./inpaint_mask.png")

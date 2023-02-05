@@ -110,7 +110,7 @@ class CompVis:
         save_grid: bool = True,
         ddim_eta: float = 0.0,
         sigma_override: dict = None,
-        seamless: bool = False,
+        tiling: bool = False,
     ):
         if init_img:
             init_img = resize_image(resize_mode, init_img, width, height)
@@ -360,7 +360,7 @@ class CompVis:
             with load_from_plasma(self.model["model"], self.model["device"]) as model:
                 for m in model.modules():
                     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                        m.padding_mode = "circular" if seamless else m._orig_padding_mode
+                        m.padding_mode = "circular" if tiling else m._orig_padding_mode
                 sampler = create_sampler_by_sampler_name(model, sampler_name)
                 if self.load_concepts and self.concepts_dir is not None:
                     prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
@@ -483,7 +483,7 @@ class CompVis:
         else:
             for m in self.model["model"].modules():
                 if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                    m.padding_mode = "circular" if seamless else m._orig_padding_mode
+                    m.padding_mode = "circular" if tiling else m._orig_padding_mode
             sampler = create_sampler_by_sampler_name(self.model["model"], sampler_name)
             if self.load_concepts and self.concepts_dir is not None:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
@@ -618,7 +618,7 @@ class CompVis:
             x_sample = x_sample.astype(np.uint8)
             image = Image.fromarray(x_sample)
             if self.safety_checker is not None and self.filter_nsfw:
-                image_features = self.feature_extractor(image, return_tensors="pt").to("cpu")
+                image_features = self.feature_extractor(image, return_tensors="pt").to(self.safety_checker.device)
                 output_images, has_nsfw_concept = self.safety_checker(
                     clip_input=image_features.pixel_values, images=x_sample
                 )

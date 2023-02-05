@@ -23,7 +23,7 @@ import torch
 from omegaconf import OmegaConf
 from torch import nn
 
-from ldm.util import instantiate_from_config
+from ldm2.util import instantiate_from_config
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
 from nataili.util.voodoo import push_model_to_plasma
@@ -59,7 +59,7 @@ class CompVisModelManager(BaseModelManager):
         """
         if model_name not in self.models:
             logger.error(f"{model_name} not found")
-            return
+            return False
         if model_name not in self.available_models:
             logger.error(f"{model_name} not available")
             logger.init_ok(f"Downloading {model_name}", status="Downloading")
@@ -81,6 +81,7 @@ class CompVisModelManager(BaseModelManager):
             logger.init_ok(f"Loading {model_name}", status="Success")
             toc = time.time()
             logger.init_ok(f"Loading {model_name}: Took {toc-tic} seconds", status="Success")
+            return True
 
     def load_model_from_config(self, model_path="", config_path="", map_location="cpu"):
         config = OmegaConf.load(config_path)

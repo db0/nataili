@@ -46,6 +46,7 @@ class BaseModelManager:
         self.models = {}
         self.available_models = []
         self.loaded_models = {}
+        self.tainted_models = []
         self.pkg = importlib_resources.files("nataili")
         self.models_db_name = "models"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
@@ -191,10 +192,16 @@ class BaseModelManager:
         Returns True if all files are valid, False otherwise
         """
         files = self.get_model_files(model_name)
+        logger.debug(f"Validating {model_name} with {len(files)} files")
+        logger.debug(files)
         for file_details in files:
+            if ".yaml" in file_details["path"]:
+                continue
             if not self.check_file_available(file_details["path"]):
+                logger.debug(f"File {file_details['path']} not found")
                 return False
             if not skip_checksum and not self.validate_file(file_details):
+                logger.debug(f"File {file_details['path']} has invalid checksum")
                 return False
         return True
 
@@ -214,9 +221,15 @@ class BaseModelManager:
                     if not chunk:
                         break
                     file_hash.update(chunk)
+            logger.debug(f"md5sum: {file_hash.hexdigest()}")
+            logger.debug(f"Expected: {file_details['md5sum']}")
             if file_details["md5sum"] != file_hash.hexdigest():
                 return False
-        return True
+            else:
+                return True
+        else:
+            logger.debug("No md5sum provided")
+            return True
 
     def check_file_available(self, file_path):
         """

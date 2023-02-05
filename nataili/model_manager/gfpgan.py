@@ -52,7 +52,7 @@ class GfpganModelManager(BaseModelManager):
             cpu_only = True
         if model_name not in self.models:
             logger.error(f"{model_name} not found")
-            return
+            return False
         if model_name not in self.available_models:
             logger.error(f"{model_name} not available")
             logger.init_ok(f"Downloading {model_name}", status="Downloading")
@@ -69,6 +69,7 @@ class GfpganModelManager(BaseModelManager):
             logger.init_ok(f"Loading {model_name}", status="Success")
             toc = time.time()
             logger.init_ok(f"Loading {model_name}: Took {toc-tic} seconds", status="Success")
+            return True
 
     def load_gfpgan(
         self,

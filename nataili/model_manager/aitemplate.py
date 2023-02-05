@@ -132,10 +132,10 @@ class AITemplateModelManager(BaseModelManager):
         """
         if not self.cuda_available:
             logger.warning("AITemplate requires CUDA")
-            return
+            return False
         if model_name not in self.models:
             logger.error(f"{model_name} not found")
-            return
+            return False
         if len(self.available_models) == 0:
             logger.info("No available aitemplates")
             sm = self.recommended_gpu[0]["sm"]
@@ -152,6 +152,7 @@ class AITemplateModelManager(BaseModelManager):
             logger.init_ok(f"Loading {model_name}", status="Success")
             toc = time.time()
             logger.init_ok(f"Loading {model_name}: Took {toc-tic} seconds", status="Success")
+            return True
 
     def load_aitemplate(
         self,
