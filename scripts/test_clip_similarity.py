@@ -1,23 +1,21 @@
 import os
 
-import PIL
+from PIL import Image
 
-from nataili import Interrogator, ModelManager, logger
+from nataili.model_manager.clip import ClipModelManager
+from nataili.clip.interrogate import Interrogator
+from nataili.util.logger import logger
 
 images = []
 
 directory = "teeth"
 
-for file in os.listdir(directory):
-    pil_image = PIL.Image.open(f"{directory}/{file}").convert("RGB")
-    images.append({"pil_image": pil_image, "filename": file})
+mm = ClipModelManager()
 
-mm = ModelManager()
-
-mm.clip.load("ViT-L/14")
+mm.load("ViT-L/14")
 
 interrogator = Interrogator(
-    mm.clip.loaded_models["ViT-L/14"],
+    mm.loaded_models["ViT-L/14"],
 )
 
 base_words = [
@@ -54,11 +52,13 @@ for base_word in base_words:
 html_string = ""
 
 
-for image in images:
-    results = interrogator(image['pil_image'], word_list, top_count=5, similarity=True)
+
+for file in os.listdir(directory):
+    results = interrogator(file, directory, word_list, similarity=True)
+    results = results['default']
     html_string += f"""
-    <h1>{image['filename']}</h1>
-    <img src="{directory}/{image['filename']}" width="300" />
+    <h1>{file}</h1>
+    <img src="{directory}/{file}" width="300" />
     <table>
     <tr>
     <th>Word</th>

@@ -13,6 +13,7 @@ mm.load("GFPGAN")
 
 facefixer = gfpgan(mm.loaded_models["GFPGAN"])
 
-tick = time.time()
-results = facefixer(input_image=image, strength=1.0)
-logger.init_ok(f"Job Completed. Took {time.time() - tick} seconds", status="Success")
+for i in range(10):
+    tick = time.time()
+    results = facefixer(input_image=image, strength=1.0)
+    logger.init_ok(f"Job Completed. Took {time.time() - tick} seconds", status="Success")
