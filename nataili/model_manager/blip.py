@@ -89,6 +89,8 @@ class BlipModelManager(BaseModelManager):
         cpu_only=False,
         blip_image_eval_size=512,
     ):
+        if not self.cuda_available:
+            cpu_only = True
         vit = "base" if model_name == "BLIP" else "large"
         model_path = self.get_model_files(model_name)[0]["path"]
         model_path = f"{self.path}/{model_path}"

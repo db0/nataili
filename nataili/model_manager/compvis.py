@@ -66,6 +66,9 @@ class CompVisModelManager(BaseModelManager):
             self.download_model(model_name)
             logger.init_ok(f"{model_name} downloaded", status="Downloading")
         if model_name not in self.loaded_models:
+            if not self.cuda_available:
+                cpu_only = True
+                voodoo = False
             tic = time.time()
             logger.init(f"{model_name}", status="Loading")
             self.loaded_models[model_name] = self.load_compvis(

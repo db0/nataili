@@ -135,6 +135,8 @@ class ClipModelManager(BaseModelManager):
             self.download_model(model_name)
             logger.init_ok(f"{model_name} downloaded", status="Downloading")
         if model_name not in self.loaded_models:
+            if not self.cuda_available:
+                cpu_only = True
             tic = time.time()
             logger.init(f"{model_name}", status="Loading")
             if self.models[model_name]["type"] == "open_clip":

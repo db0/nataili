@@ -83,6 +83,8 @@ class DiffusersModelManager(BaseModelManager):
         cpu_only=False,
         voodoo=False,
     ):
+        if not self.cuda_available:
+            cpu_only = True
         model_path = self.models[model_name]["hf_path"]
         if cpu_only:
             device = torch.device("cpu")

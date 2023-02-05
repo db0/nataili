@@ -84,6 +84,8 @@ class CodeFormerModelManager(BaseModelManager):
     ):
         model_path = self.get_model_files(model_name)[0]["path"]
         model_path = f"{self.path}/{model_path}"
+        if not self.cuda_available:
+            cpu_only = True
         if cpu_only:
             device = torch.device("cpu")
             half_precision = False

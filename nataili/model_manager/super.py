@@ -15,6 +15,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import torch
+
 from nataili.model_manager.aitemplate import AITemplateModelManager
 from nataili.model_manager.blip import BlipModelManager
 from nataili.model_manager.clip import ClipModelManager
@@ -44,6 +46,7 @@ class ModelManager:
         self.gfpgan = gfpgan
         if codeformer and self.esrgan is not None and self.gfpgan is not None:
             self.codeformer = CodeFormerModelManager(gfpgan=self.gfpgan, esrgan=self.esrgan)
+        self.cuda_available = torch.cuda.is_available()
 
     def load(
         self,
@@ -60,6 +63,8 @@ class ModelManager:
         cpu_only: bool. If True, the model will be loaded on the cpu. If True, half_precision will be set to False.
         voodoo: bool. (compvis only) Voodoo ray.
         """
+        if not self.cuda_available:
+            cpu_only = True
         if model_name in self.aitemplate.models:
             return self.aitemplate.load(model_name, gpu_id)
         if model_name in self.blip.models:

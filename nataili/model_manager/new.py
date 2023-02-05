@@ -49,6 +49,8 @@ class NewModelManager(BaseModelManager):
         gpu_id: int. The id of the gpu to use. If the gpu is not available, the model will be loaded on the cpu.
         cpu_only: bool. If True, the model will be loaded on the cpu. If True, half_precision will be set to False.
         """
+        if not self.cuda_available:
+            cpu_only = True
         if model_name not in self.models:
             logger.error(f"{model_name} not found")
             return
