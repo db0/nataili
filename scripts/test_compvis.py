@@ -28,6 +28,7 @@ def test_compvis(
     sigma_override=None,
     filter_nsfw=False,
     safety_checker=None,
+    clip_skip=1,
 ):
     log_message = f"sampler: {sampler} steps: {steps} model: {model}"
     if seed:
@@ -56,6 +57,7 @@ def test_compvis(
         init_img=init_img,
         sigma_override=sigma_override,
         denoising_strength=denoising_strength,
+        clip_skip=clip_skip
     )
 
 
@@ -79,6 +81,7 @@ sigma_overrides = [
 ]
 
 denoising_strengths = [0.22, 0.44, 0.88]
+clip_skip_values = [1,2,3]
 
 output_dir = f"./test_output/{str(uuid.uuid4())}"
 
@@ -128,8 +131,18 @@ def test():
                 init_img=init_image,
                 denoising_strength=denoising_strength,
                 output_dir=output_dir,
+                clip_skip=1,
             )
 
+        logger.info("Testing Clip Skip")
+        for i in clip_skip_values:
+            test_compvis(
+                model,
+                prompt,
+                "k_lms",
+                output_dir=output_dir,
+                clip_skip=i,
+            )
 
 if __name__ == "__main__":
     test()

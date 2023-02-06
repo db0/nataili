@@ -551,10 +551,10 @@ class LatentDiffusion(DDPM):
             raise NotImplementedError(f"encoder_posterior of type '{type(encoder_posterior)}' not yet implemented")
         return self.scale_factor * z
 
-    def get_learned_conditioning(self, c):
+    def get_learned_conditioning(self, c, clip_skip):
         if self.cond_stage_forward is None:
             if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
-                c = self.cond_stage_model.encode(c)
+                c = self.cond_stage_model.encode(c, clip_skip)
                 if isinstance(c, DiagonalGaussianDistribution):
                     c = c.mode()
             else:
@@ -678,9 +678,9 @@ class LatentDiffusion(DDPM):
             if not self.cond_stage_trainable or force_c_encode:
                 if isinstance(xc, dict) or isinstance(xc, list):
                     # import pudb; pudb.set_trace()
-                    c = self.get_learned_conditioning(xc)
+                    c = self.get_learned_conditioning(xc, 1)
                 else:
-                    c = self.get_learned_conditioning(xc.to(self.device))
+                    c = self.get_learned_conditioning(xc.to(self.device), 1)
             else:
                 c = xc
             if bs is not None:
@@ -875,7 +875,7 @@ class LatentDiffusion(DDPM):
         if self.model.conditioning_key is not None:
             assert c is not None
             if self.cond_stage_trainable:
-                c = self.get_learned_conditioning(c)
+                c = self.get_learned_conditioning(c, 1)
             if self.shorten_cond_schedule:  # TODO: drop this option
                 tc = self.cond_ids[t].to(self.device)
                 c = self.q_sample(x_start=c, t=tc, noise=torch.randn_like(c.float()))
@@ -964,7 +964,7 @@ class LatentDiffusion(DDPM):
                 adapted_cond = torch.stack([torch.cat([cut_cond, p], dim=1) for p in patch_limits_tknzd])
                 adapted_cond = rearrange(adapted_cond, 'l b n -> (l b) n')
                 print(adapted_cond.shape)
-                adapted_cond = self.get_learned_conditioning(adapted_cond)
+                adapted_cond = self.get_learned_conditioning(adapted_cond, 1)
                 print(adapted_cond.shape)
                 adapted_cond = rearrange(adapted_cond, '(l b) n d -> l b n d', l=z.shape[-1])
                 print(adapted_cond.shape)

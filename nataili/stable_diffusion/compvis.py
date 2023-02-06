@@ -111,6 +111,7 @@ class CompVis:
         ddim_eta: float = 0.0,
         sigma_override: dict = None,
         tiling: bool = False,
+        clip_skip=1,
     ):
         if init_img:
             init_img = resize_image(resize_mode, init_img, width, height)
@@ -377,13 +378,16 @@ class CompVis:
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
-                            uc = model.get_learned_conditioning(len(prompts) * [negprompt])
+                            uc = model.get_learned_conditioning(len(prompts) * [negprompt], 1)
 
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
 
                             c = torch.cat(
-                                [get_learned_conditioning_with_prompt_weights(prompt, model) for prompt in prompts]
+                                [
+                                    get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
+                                    for prompt in prompts
+                                ]
                             )
 
                             opt_C = 4
@@ -401,6 +405,7 @@ class CompVis:
                                             find_noise_steps,
                                             0.0,
                                             normalize=True,
+                                            clip_skip=clip_skip,
                                         )
                                     ],
                                     dim=0,
@@ -435,7 +440,7 @@ class CompVis:
                     init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert(
                         "RGB"
                     )
-                    null_token = model.get_learned_conditioning([""])
+                    null_token = model.get_learned_conditioning([""], 1)
                     with torch.no_grad():
                         for n in range(n_iter):
                             print(f"Iteration: {n+1}/{n_iter}")
@@ -443,7 +448,7 @@ class CompVis:
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                             cond = {}
-                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts)]
+                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
                             init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                             init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                             cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
@@ -499,14 +504,14 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
-                        uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt])
+                        uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt], 1)
 
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
                         c = torch.cat(
                             [
-                                get_learned_conditioning_with_prompt_weights(prompt, self.model["model"])
+                                get_learned_conditioning_with_prompt_weights(prompt, self.model["model"], clip_skip)
                                 for prompt in prompts
                             ]
                         )
@@ -526,6 +531,7 @@ class CompVis:
                                         find_noise_steps,
                                         0.0,
                                         normalize=True,
+                                        clip_skip=clip_skip,
                                     )
                                 ],
                                 dim=0,
@@ -558,7 +564,7 @@ class CompVis:
             else:
                 init_image = init_img
                 init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert("RGB")
-                null_token = self.model["model"].get_learned_conditioning([""])
+                null_token = self.model["model"].get_learned_conditioning([""], 1)
                 with torch.no_grad():
                     for n in range(n_iter):
                         print(f"Iteration: {n+1}/{n_iter}")
@@ -566,7 +572,7 @@ class CompVis:
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                         cond = {}
-                        cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts)]
+                        cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts, clip_skip)]
                         init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                         init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                         cond["c_concat"] = [self.model["model"].encode_first_stage(init_image).mode()]

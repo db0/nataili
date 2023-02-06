@@ -158,17 +158,21 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         for param in self.parameters():
             param.requires_grad = False
 
-    def forward(self, text):
+    def forward(self, text, clip_skip):
         batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
                                         return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
         tokens = batch_encoding["input_ids"].to(self.device)
-        outputs = self.transformer(input_ids=tokens)
+        outputs = self.transformer(input_ids=tokens, output_hidden_states=True)
 
-        z = outputs.last_hidden_state
+        if clip_skip > 1:
+            z = outputs.hidden_states[-clip_skip]
+            z = self.transformer.text_model.final_layer_norm(z)
+        else:
+            z = outputs.last_hidden_state
         return z
 
-    def encode(self, text):
-        return self(text)
+    def encode(self, text, clip_skip):
+        return self(text, clip_skip)
 
 
 class FrozenCLIPTextEmbedder(nn.Module):
