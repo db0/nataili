@@ -23,6 +23,8 @@ from aspects import get_aspect_buckets
 from PIL import Image, ImageOps
 from torchvision import transforms
 
+from nataili.cache import get_cache_directory
+
 
 class LatentCacheItem:
     """
@@ -49,7 +51,9 @@ class LatentCacheManager:
     Manages a cache of latent vectors for a dataset.
     """
 
-    def __init__(self, latent_cache_path="/.cache/latents", device=torch.device("cuda"), jitter_lim=8, vae=None):
+    def __init__(
+        self, latent_cache_path=f"{get_cache_directory()}/latents", device=torch.device("cuda"), jitter_lim=8, vae=None
+    ):
         """
         Manages caching of image latents to disk,
         latent_cache_path: path to latent cache folder

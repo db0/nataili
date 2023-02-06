@@ -23,6 +23,7 @@ from diffusers import LMSDiscreteScheduler
 from transformers import CLIPFeatureExtractor, CLIPTokenizer
 
 from nataili.aitemplate import StableDiffusionAITPipeline
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
 from nataili.util.voodoo import init_ait_module
@@ -32,7 +33,7 @@ class AITemplateModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/aitemplate"
+        self.path = f"{get_cache_directory()}/aitemplate"
         self.models_db_name = "aitemplate"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (

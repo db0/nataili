@@ -27,6 +27,7 @@ import time
 
 import torch
 
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.blip import blip_decoder
 from nataili.util.logger import logger
@@ -36,7 +37,7 @@ class BlipModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/blip"
+        self.path = f"{get_cache_directory()}/blip"
         self.models_db_name = "blip"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (

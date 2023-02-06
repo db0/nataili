@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 from diffusers.pipelines import StableDiffusionDepth2ImgPipeline, StableDiffusionInpaintPipeline
 
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
 from nataili.util.voodoo import push_diffusers_pipeline_to_plasma
@@ -30,7 +31,7 @@ class DiffusersModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/diffusers"
+        self.path = f"{get_cache_directory()}/diffusers"
         self.models_db_name = "diffusers"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (

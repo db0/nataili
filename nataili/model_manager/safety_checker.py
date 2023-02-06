@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
 
@@ -29,7 +30,7 @@ class SafetyCheckerModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/safety_checker"
+        self.path = f"{get_cache_directory()}/safety_checker"
         self.models_db_name = "safety_checker"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (

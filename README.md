@@ -39,7 +39,7 @@ Each service has a set of models that can be used. You can use the model manager
 
 The models for a service are stored in a .json file. These files are included in the package.
 
-Models will be downloaded to the `~/.cache/nataili` directory. The models are stored in a directory named after the service.
+Models will be downloaded to the `NATAILI_CACHE_HOME/nataili/` directory, if the enviroment variable NATAILI_CACHE_HOME is specified. Otherwise, models will be downloaded to `XDG_CACHE_HOME/nataili/`, which if not specified defaults to `~/.cache/nataili`. The models are stored in a directory named after the service.
 
 Structure of a model file:
 

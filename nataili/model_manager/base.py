@@ -30,6 +30,7 @@ import torch
 from tqdm import tqdm
 from transformers import logging
 
+from nataili.cache import get_cache_directory
 from nataili.util.logger import logger
 
 if sys.version_info < (3, 9):
@@ -42,7 +43,7 @@ logging.set_verbosity_error()
 
 class BaseModelManager:
     def __init__(self, download_reference=True):
-        self.path = f"{Path.home()}/.cache/nataili/"
+        self.path = get_cache_directory()
         self.models = {}
         self.available_models = []
         self.loaded_models = {}

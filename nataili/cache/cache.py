@@ -27,6 +27,17 @@ from tqdm import tqdm
 from nataili.util.logger import logger
 
 
+def get_cache_directory():
+    """The nataili specific directory for caching."""
+    NATAILI_CACHE_HOME = os.environ.get("NATAILI_CACHE_HOME")
+    base_dir = ""
+    if NATAILI_CACHE_HOME:
+        base_dir = NATAILI_CACHE_HOME
+    else:
+        base_dir = os.environ.get("XDG_CACHE_HOME", os.path.join(Path.home(), ".cache/"))
+    return os.path.join(base_dir, "nataili")
+
+
 class Cache:
     def __init__(self, cache_name, cache_subname=None, cache_parentname=None):
         """
@@ -49,7 +60,7 @@ class Cache:
         If cache file does not exist it is created
         If cache folder does not exist it is created
         """
-        self.path = f"{Path.home()}/.cache/nataili/"
+        self.path = get_cache_directory()
         if cache_parentname:
             self.path = os.path.join(self.path, cache_parentname)
         self.cache_dir = os.path.join(self.path, cache_name)

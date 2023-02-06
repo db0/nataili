@@ -20,6 +20,7 @@ from pathlib import Path
 
 import torch
 
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
 
@@ -28,7 +29,7 @@ class NewModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/new"
+        self.path = f"{get_cache_directory()}/new"
         self.models_db_name = "new"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (

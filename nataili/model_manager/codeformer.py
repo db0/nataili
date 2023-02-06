@@ -20,6 +20,7 @@ from pathlib import Path
 
 import torch
 
+from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.model_manager.esrgan import EsrganModelManager
 from nataili.model_manager.gfpgan import GfpganModelManager
@@ -31,7 +32,7 @@ class CodeFormerModelManager(BaseModelManager):
     def __init__(self, download_reference=True):
         super().__init__()
         self.download_reference = download_reference
-        self.path = f"{Path.home()}/.cache/nataili/codeformer"
+        self.path = f"{get_cache_directory()}/codeformer"
         self.models_db_name = "codeformer"
         self.gfpgan = GfpganModelManager()
         self.esrgan = EsrganModelManager()
