@@ -68,6 +68,7 @@ def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip):
                     current_prompt_c,
                     subprompt_wo_weight,
                     weight_val,
+                    clip_skip,
                 )
             except ValueError:
                 pass
