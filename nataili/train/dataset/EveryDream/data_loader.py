@@ -26,6 +26,7 @@ from PIL import Image
 
 from . import aspects as aspects
 from .image_train_item import ImageTrainItem
+from nataili import disable_progress
 
 PIL.Image.MAX_IMAGE_PIXELS = 715827880 * 4  # increase decompression bomb error limit to 4x default
 
@@ -101,7 +102,7 @@ class DataLoaderMultiAspect:
         """
         decorated_image_train_items = []
 
-        for pathname in tqdm.tqdm(image_paths):
+        for pathname in tqdm.tqdm(image_paths, disable=disable_progress.active):
             caption_from_filename = os.path.splitext(os.path.basename(pathname))[0].split("_")[0]
 
             txt_file_path = os.path.splitext(pathname)[0] + ".txt"

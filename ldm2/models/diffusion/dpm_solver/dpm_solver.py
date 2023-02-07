@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import math
+from nataili import disable_progress
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
@@ -1052,14 +1053,14 @@ class DPM_Solver:
                 model_prev_list = [self.model_fn(x, vec_t)]
                 t_prev_list = [vec_t]
                 # Init the first `order` values by lower order multistep DPM-Solver.
-                for init_order in tqdm(range(1, order), desc="DPM init order"):
+                for init_order in tqdm(range(1, order), desc="DPM init order", disable=disable_progress.active):
                     vec_t = timesteps[init_order].expand(x.shape[0])
                     x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, init_order,
                                                          solver_type=solver_type)
                     model_prev_list.append(self.model_fn(x, vec_t))
                     t_prev_list.append(vec_t)
                 # Compute the remaining values by `order`-th order multistep DPM-Solver.
-                for step in tqdm(range(order, steps + 1), desc="DPM multistep"):
+                for step in tqdm(range(order, steps + 1), desc="DPM multistep", disable=disable_progress.active):
                     vec_t = timesteps[step].expand(x.shape[0])
                     if lower_order_final and steps < 15:
                         step_order = min(order, steps + 1 - step)
