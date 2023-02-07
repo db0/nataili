@@ -125,7 +125,7 @@ Legal thriller
 Mystery
 Cozy mystery
 City mysteries
-Detective: fiction that follows a detective or other investigator (professional, amateur, or retired) as they investigate or solve a mystery/crime. Detective novels generally begin with a mysterious incident (e.g., death). One of the most popular examples is the Sherlock Holmes stories; well-known detective novelists include Agatha Christie and Raymond Chandler.[6]
+Detective
 Gong'an
 Girl detective
 Inverted detective story (aka howcatchem)
@@ -150,7 +150,7 @@ Lovecraftian Horror
 Cosmic Horror
 Jiangshi fiction
 Werewolf fiction
-Vampire literature
+Vampire fiction
 Psychological Horror
 Splatterpunk
 Techno Horror
@@ -165,7 +165,7 @@ Utopian and dystopian
 Feminist
 Gothic
 Isekai
-Hard
+Hard fiction
 Climate fiction
 Parallel world
 Libertarian fiction
@@ -179,7 +179,6 @@ Dying Earth
 Planetary romance
 Sword and planet
 Space opera
-Space Western
 Amish
 Chivalric
 Historical
