@@ -18,10 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import contextlib
 import copy
 import os
+import shutil
 from typing import Dict, List, Tuple, TypeVar
 
 import ray
 import torch
+
 
 from nataili.aitemplate import Model
 from nataili import enable_local_ray_temp
