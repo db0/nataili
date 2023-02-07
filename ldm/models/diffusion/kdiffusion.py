@@ -3,6 +3,8 @@ import k_diffusion as K
 import torch
 import torch.nn as nn
 import warnings
+from nataili import disable_progress
+
 warnings.filterwarnings('ignore')
 
 class KDiffusionSampler:
@@ -51,11 +53,11 @@ class KDiffusionSampler:
     
         samples_ddim = None
         if self.schedule == "dpm_fast":
-            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigma_min, sigma_max, S, extra_args=extra_args, disable=False, callback=self.generation_callback)
+            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigma_min, sigma_max, S, extra_args=extra_args, disable=disable_progress.active, callback=self.generation_callback)
         elif self.schedule == "dpm_adaptive":
-            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigma_min, sigma_max, extra_args=extra_args, disable=False, callback=self.generation_callback)
+            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigma_min, sigma_max, extra_args=extra_args, disable=disable_progress.active, callback=self.generation_callback)
         else:
-            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=False, callback=self.generation_callback)
+            samples_ddim = K.sampling.__dict__[f'sample_{self.schedule}'](model_wrap_cfg, x, sigmas, extra_args=extra_args, disable=disable_progress.active, callback=self.generation_callback)
         #
         return samples_ddim, None
 class CFGMaskedDenoiser(nn.Module):
