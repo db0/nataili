@@ -295,7 +295,7 @@ class BaseModelManager:
         - delete file
         - unzip file
         """
-        if model_name in self.available_models:
+        if model_name in self.available_models and model_name not in self.tainted_models:
             logger.info(f"{model_name} is already available.")
             return True
         download = self.get_model_download(model_name)
@@ -352,7 +352,7 @@ class BaseModelManager:
                 logger.info(f"delete {temp_path}")
                 shutil.rmtree(temp_path)
             else:
-                if not self.check_file_available(file_path):
+                if not self.check_file_available(file_path) or model_name in self.tainted_models:
                     logger.debug(f"Downloading {download_url} to {file_path}")
                     self.download_file(download_url, file_path)
         if not self.validate_model(model_name):
