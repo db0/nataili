@@ -65,16 +65,27 @@ class ImageEmbed:
         )
 
     @autocast_cuda
-    def __call__(self, filename: str, directory: str = None, skip_cache: bool = False):
+    def __call__(self, image: Image.Image = None, filename: str = None, directory: str = None, skip_cache: bool = False):
         """
         :param pil_image: PIL image to embed
         SHA256 hash of image is used as key in cache
         If image is not in cache, embed it and save it to cache
         Returns SHA256 hash of image
         """
-        pil_image = Image.open(f"{directory}/{filename}").convert("RGB")
-        file_hash = hashlib.sha256(open(f"{directory}/{filename}", "rb").read()).hexdigest()
-        image_hash = hashlib.sha256(pil_image.tobytes()).hexdigest()
+        if image is None and filename is None:
+            raise ValueError("Either image or filename must be set")
+        if image is not None and filename is not None:
+            raise ValueError("Only one of image or filename must be set")
+        if image is None:
+            pil_image = Image.open(f"{directory}/{filename}").convert("RGB")
+        else:
+            pil_image = image
+        if image is None:
+            file_hash = hashlib.sha256(open(f"{directory}/{filename}", "rb").read()).hexdigest()
+            image_hash = hashlib.sha256(pil_image.tobytes()).hexdigest()
+        else:
+            file_hash = None
+            image_hash = hashlib.sha256(pil_image.tobytes()).hexdigest()
         if not skip_cache:
             cached = self.cache.get(pil_hash=image_hash)
             if cached:
