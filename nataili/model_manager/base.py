@@ -272,7 +272,7 @@ class BaseModelManager:
                 miniters=1,
                 desc=pbar_desc,
                 total=int(r.headers.get("content-length", 0)),
-                disable=disable_progress.active
+                disable=disable_progress.active,
             ) as pbar:
                 for chunk in r.iter_content(chunk_size=16 * 1024):
                     if chunk:

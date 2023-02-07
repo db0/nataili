@@ -287,10 +287,7 @@ class DreamboothLoRA:
         self.logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
         self.logger.info(f"  Total optimization steps = {max_train_steps}")
         # Only show the progress bar once on each machine.
-        progress_bar = tqdm(
-            range(100),
-            disable=not self.accelerator.is_local_main_process or disable_progress.active
-        )
+        progress_bar = tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active)
         progress_bar.set_description("Steps")
         global_step = 0
         last_save = 0

@@ -24,9 +24,10 @@ import tqdm
 from colorama import Fore, Style
 from PIL import Image
 
+from nataili import disable_progress
+
 from . import aspects as aspects
 from .image_train_item import ImageTrainItem
-from nataili import disable_progress
 
 PIL.Image.MAX_IMAGE_PIXELS = 715827880 * 4  # increase decompression bomb error limit to 4x default
 
