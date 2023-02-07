@@ -58,6 +58,7 @@ class CompVis:
         model,
         output_dir,
         model_name=None,
+        model_baseline=None,
         save_extension="jpg",
         output_file_path=False,
         load_concepts=False,
@@ -70,6 +71,7 @@ class CompVis:
     ):
         self.model = model
         self.model_name = model_name
+        self.model_baseline = model_baseline
         self.output_dir = output_dir
         self.output_file_path = output_file_path
         self.save_extension = save_extension
@@ -113,7 +115,7 @@ class CompVis:
         tiling: bool = False,
         clip_skip=1,
     ):
-        if self.model_name.startswith("stable_diffusion_2"):
+        if self.model_baseline == "stable diffusion 2":
             clip_skip = None
         if init_img:
             init_img = resize_image(resize_mode, init_img, width, height)
@@ -305,8 +307,7 @@ class CompVis:
 
         def create_sampler_by_sampler_name(model):
             nonlocal sampler_name
-            if self.model_name.startswith("stable_diffusion_2"):
-                sampler = DPMSolverSampler(model)
+            if self.model_baseline == "stable diffusion 2":
                 sampler_name = "dpmsolver"
             elif sampler_name == "PLMS":
                 sampler = PLMSSampler(model)
