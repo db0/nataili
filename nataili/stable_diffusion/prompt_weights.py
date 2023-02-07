@@ -27,21 +27,31 @@ prompt_filter_regex = r"[\(\)]|:\d+(\.\d+)?"
 # The remainder is exactly what the subprompt 'adds' to the embedding vector in the context of the full prompt
 # Then, we use this value to update the current embedding vector according to the desired weight of the subprompt
 def update_conditioning(
-    filtered_whole_prompt, filtered_whole_prompt_c, model, current_prompt_c, subprompt, weight, clip_skip
+    filtered_whole_prompt, filtered_whole_prompt_c, model, current_prompt_c, subprompt, weight, clip_skip=None
 ):
     prompt_wo_subprompt = filtered_whole_prompt.replace(subprompt, "")
-    prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt, clip_skip)
+    # workaround for sd2.x
+    # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
+    if clip_skip is not None:
+        prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt, clip_skip)
+    else:
+        prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt)
     subprompt_contribution_to_c = filtered_whole_prompt_c - prompt_wo_subprompt_c
     current_prompt_c += (weight - 1.0) * subprompt_contribution_to_c
     return current_prompt_c
 
 
-def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip):
+def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None):
     # Get a filtered prompt without (, ), and :number + conditioning
     filtered_whole_prompt = re.sub(prompt_filter_regex, "", prompt)
 
     # Get full prompt embedding vector
-    filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt, clip_skip)
+    # workaround for sd2.x
+    # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
+    if clip_skip is not None:
+        filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt, clip_skip)
+    else:
+        filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt)
     current_prompt_c = filtered_whole_prompt_c
 
     # Find the first () delimited subprompt
@@ -68,6 +78,7 @@ def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip):
                     current_prompt_c,
                     subprompt_wo_weight,
                     weight_val,
+                    clip_skip,
                 )
             except ValueError:
                 pass

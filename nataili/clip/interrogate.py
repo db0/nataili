@@ -173,12 +173,13 @@ class Interrogator:
         similarity /= image_features.shape[0]
 
         top_probs, top_labels = similarity.cpu().topk(top_count, dim=-1)
-        top = [(text_array[top_labels[0][i].numpy()], (top_probs[0][i].numpy() * 100)) for i in range(top_count)]
+        top = [{"text": text_array[top_labels[0][i].numpy()], "confidence": (top_probs[0][i].numpy() * 100)} for i in range(top_count)]
         return top
 
     def __call__(
         self,
-        filename: str,
+        image: Image.Image = None,
+        filename: str = None,
         directory: str = None,
         text_array: Union[List[str], Dict[str, List[str]], None] = None,
         similarity=False,
@@ -196,6 +197,12 @@ class Interrogator:
             See similarity() for more details
         If text_array is None, uses default text_array from model["data_lists"]
         """
+        if image is None and filename is None:
+            logger.error("Either image or filename must be set")
+            return
+        if image is not None and filename is not None:
+            logger.error("Only one of image or filename must be set")
+            return
         if not similarity and not rank:
             logger.error("Must specify similarity or rank")
             return
@@ -206,7 +213,7 @@ class Interrogator:
         elif isinstance(text_array, dict):
             pass
         image_embed = ImageEmbed(self.model, self.cache_image)
-        image_hash = image_embed(filename, directory)
+        image_hash = image_embed(image, filename, directory)
         image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
         image_features = torch.from_numpy(image_embed_array).float().to(self.model["device"])
         if similarity and not rank:

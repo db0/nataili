@@ -662,10 +662,10 @@ class LatentDiffusion(DDPM):
             raise NotImplementedError(f"encoder_posterior of type '{type(encoder_posterior)}' not yet implemented")
         return self.scale_factor * z
 
-    def get_learned_conditioning(self, c, clip_skip):
+    def get_learned_conditioning(self, c):
         if self.cond_stage_forward is None:
             if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
-                c = self.cond_stage_model.encode(c, clip_skip)
+                c = self.cond_stage_model.encode(c)
                 if isinstance(c, DiagonalGaussianDistribution):
                     c = c.mode()
             else:
@@ -788,7 +788,7 @@ class LatentDiffusion(DDPM):
                 xc = x
             if not self.cond_stage_trainable or force_c_encode:
                 if isinstance(xc, dict) or isinstance(xc, list):
-                    c = self.get_learned_conditioning(xc, 1)
+                    c = self.get_learned_conditioning(xc)
                 else:
                     c = self.get_learned_conditioning(xc.to(self.device), 1)
             else:
@@ -842,7 +842,7 @@ class LatentDiffusion(DDPM):
         if self.model.conditioning_key is not None:
             assert c is not None
             if self.cond_stage_trainable:
-                c = self.get_learned_conditioning(c, 1)
+                c = self.get_learned_conditioning(c)
             if self.shorten_cond_schedule:  # TODO: drop this option
                 tc = self.cond_ids[t].to(self.device)
                 c = self.q_sample(x_start=c, t=tc, noise=torch.randn_like(c.float()))
@@ -1128,15 +1128,15 @@ class LatentDiffusion(DDPM):
             if isinstance(xc, ListConfig):
                 xc = list(xc)
             if isinstance(xc, dict) or isinstance(xc, list):
-                c = self.get_learned_conditioning(xc, 1)
+                c = self.get_learned_conditioning(xc)
             else:
                 if hasattr(xc, "to"):
                     xc = xc.to(self.device)
-                c = self.get_learned_conditioning(xc, 1)
+                c = self.get_learned_conditioning(xc)
         else:
             if self.cond_stage_key in ["class_label", "cls"]:
                 xc = self.cond_stage_model.get_unconditional_conditioning(batch_size, device=self.device)
-                return self.get_learned_conditioning(xc, 1)
+                return self.get_learned_conditioning(xc)
             else:
                 raise NotImplementedError("todo")
         if isinstance(c, list):  # in case the encoder gives us a list

@@ -1,6 +1,6 @@
 import os
 
-import PIL
+from PIL import Image
 
 from nataili.model_manager.clip import ClipModelManager
 from nataili.clip.interrogate import Interrogator
@@ -20,5 +20,10 @@ interrogator = Interrogator(
 )
 
 for file in os.listdir(directory):
-    results = interrogator(file, directory, text_array=None, rank=True, top_count=5)
+    image  = Image.open(f"{directory}/{file}").convert("RGB")
+    results = interrogator(image=image, text_array=None, rank=True, top_count=5)
+    """
+    or
+    results = interrogator(filename=file, directory=directory, text_array=None, rank=True, top_count=5)
+    """
     logger.generation(results)
