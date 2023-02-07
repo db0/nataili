@@ -173,7 +173,10 @@ class Interrogator:
         similarity /= image_features.shape[0]
 
         top_probs, top_labels = similarity.cpu().topk(top_count, dim=-1)
-        top = [{"text": text_array[top_labels[0][i].numpy()], "confidence": (top_probs[0][i].numpy() * 100)} for i in range(top_count)]
+        top = [
+            {"text": text_array[top_labels[0][i].numpy()], "confidence": (top_probs[0][i].numpy() * 100)}
+            for i in range(top_count)
+        ]
         return top
 
     def __call__(

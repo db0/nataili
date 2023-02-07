@@ -1,20 +1,3 @@
-"""
-This file is part of nataili ("Homepage" = "https://github.com/Sygil-Dev/nataili").
-
-Copyright 2022 hlky and Sygil-Dev
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
 import sys
 from functools import partialmethod
 
@@ -81,6 +64,12 @@ def is_stats_log(record):
     return True
 
 
+def is_not_stats_log(record):
+    if record["level"].name in STATS_LEVELS:
+        return False
+    return True
+
+
 def is_trace_log(record):
     if record["level"].name not in ["TRACE", "ERROR"]:
         return False
@@ -106,10 +95,10 @@ def test_logger():
 
 
 logfmt = (
-    "<level>{level: <10}</level> | <green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+    "<level>{level: <10}</level> | <green>{time:YYYY-MM-DD HH:mm:ss.SSSSSS}</green> | "
     "<green>{name}</green>:<green>{function}</green>:<green>{line}</green> - <level>{message}</level>"
 )
-genfmt = "<level>{level: <10}</level> @ <green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{message}</level>"
+genfmt = "<level>{level: <10}</level> @ <green>{time:YYYY-MM-DD HH:mm:ss.SSSSSS}</green> | <level>{message}</level>"
 initfmt = "<magenta>INIT      </magenta> | <level>{extra[status]: <11}</level> | <magenta>{message}</magenta>"
 msgfmt = "<level>{level: <10}</level> | <level>{message}</level>"
 
@@ -167,12 +156,22 @@ config = {
             "filter": is_msg_log,
         },
         {
+            "sink": "logs/bridge.log",
+            "format": logfmt,
+            "level": "DEBUG",
+            "colorize": False,
+            "filter": is_not_stats_log,
+            "retention": "2 days",
+            "rotation": "3 hours",
+        },
+        {
             "sink": "logs/stats.log",
             "format": logfmt,
             "level": "STATS",
             "colorize": False,
             "filter": is_stats_log,
             "retention": "7 days",
+            "rotation": "1 days",
         },
         {
             "sink": "logs/trace.log",
@@ -181,6 +180,7 @@ config = {
             "colorize": False,
             "filter": is_trace_log,
             "retention": "3 days",
+            "rotation": "1 days",
             "backtrace": True,
             "diagnose": True,
         },

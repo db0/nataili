@@ -234,7 +234,11 @@ class ModelManager:
                 if self.compvis is not None:
                     for model in self.compvis.models:
                         # We don't want to check the .yaml file as those exist in this repo instead
-                        model_files = [filename for filename in self.compvis.get_model_files(model) if not filename['path'].endswith('.yaml')]
+                        model_files = [
+                            filename
+                            for filename in self.compvis.get_model_files(model)
+                            if not filename["path"].endswith(".yaml")
+                        ]
                         if self.compvis.check_available(model_files):
                             models_available.append(model)
             if model_type == "diffusers":

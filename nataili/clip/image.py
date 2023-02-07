@@ -65,7 +65,9 @@ class ImageEmbed:
         )
 
     @autocast_cuda
-    def __call__(self, image: Image.Image = None, filename: str = None, directory: str = None, skip_cache: bool = False):
+    def __call__(
+        self, image: Image.Image = None, filename: str = None, directory: str = None, skip_cache: bool = False
+    ):
         """
         :param pil_image: PIL image to embed
         SHA256 hash of image is used as key in cache

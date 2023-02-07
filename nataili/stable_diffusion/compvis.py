@@ -114,11 +114,29 @@ class CompVis:
         sigma_override: dict = None,
         tiling: bool = False,
         clip_skip=1,
+        hires_fix: bool = False,
     ):
         if self.model_baseline == "stable diffusion 2":
             clip_skip = None
-        if init_img:
+        if init_img is not None:
             init_img = resize_image(resize_mode, init_img, width, height)
+            hires_fix = False
+        else:
+            if self.model_baseline != "stable diffusion 2" and hires_fix and width > 512 and height > 512:
+                logger.debug("HiRes Fix Requested")
+                final_width = width
+                final_height = height
+                # Commented out until sd2 img2img is available
+                # if self.model_baseline == "stable diffusion 2":
+                #    first_pass_ratio = min(final_height / 768, final_width / 768)
+                # else:
+                #    first_pass_ratio = min(final_height / 512, final_width / 512)
+                first_pass_ratio = min(final_height / 512, final_width / 512)
+                width = (int(final_width / first_pass_ratio) // 64) * 64
+                height = (int(final_height / first_pass_ratio) // 64) * 64
+                logger.debug(f"First pass image will be processed at width={width}; height={height}")
+            else:
+                hires_fix = False
         if mask_mode == "mask":
             if init_mask:
                 init_mask = process_init_mask(init_mask)
@@ -206,9 +224,14 @@ class CompVis:
                 mask,
             )
 
-        def sample_img2img(init_data, x, conditioning, unconditional_conditioning, sampler_name):
+        def sample_img2img(init_data, ddim_steps, x, conditioning, unconditional_conditioning, sampler_name):
             nonlocal sampler
             t_enc_steps = t_enc
+            if hires_fix:
+                ddim_steps = 20
+                t_enc_steps = int(0.2 * ddim_steps)
+            else:
+                t_enc_steps = t_enc
             obliterate = False
             if ddim_steps == t_enc_steps:
                 t_enc_steps = t_enc_steps - 1
@@ -385,7 +408,7 @@ class CompVis:
                                 uc = model.get_learned_conditioning(len(prompts) * [negprompt], 1)
                             else:
                                 uc = model.get_learned_conditioning(len(prompts) * [negprompt])
-                                
+
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
 
@@ -425,6 +448,7 @@ class CompVis:
                             samples_ddim = (
                                 sample_img2img(
                                     init_data=init_data,
+                                    ddim_steps=ddim_steps,
                                     x=x,
                                     conditioning=c,
                                     unconditional_conditioning=uc,
@@ -442,6 +466,35 @@ class CompVis:
                                     shape=shape,
                                     sigma_override=sigma_override,
                                 )
+                            )
+                        if hires_fix:
+                            # Put the image back together
+                            temp_x = model.decode_first_stage(samples_ddim)
+                            temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
+                            for i, x_sample in enumerate(temp_x_samples_ddim):
+                                x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
+                                x_sample = x_sample.astype(np.uint8)
+                                temp_image = Image.fromarray(x_sample)
+
+                            # Resize Image to final dimensions
+                            temp_image = ImageOps.fit(
+                                temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
+                            )
+                            shape = [opt_C, final_height // opt_f, final_width // opt_f]
+                            x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+
+                            # Re-initialise the image
+                            init_data_temp = init(model, temp_image)
+
+                            # Send image for img2img processing
+                            print("Hi-Res Fix Pass")
+                            samples_ddim = sample_img2img(
+                                init_data=init_data_temp,
+                                ddim_steps=ddim_steps,
+                                x=x,
+                                conditioning=c,
+                                unconditional_conditioning=uc,
+                                sampler_name=sampler_name,
                             )
                 else:
                     init_image = init_img
@@ -559,6 +612,7 @@ class CompVis:
                         samples_ddim = (
                             sample_img2img(
                                 init_data=init_data,
+                                ddim_steps=ddim_steps,
                                 x=x,
                                 conditioning=c,
                                 unconditional_conditioning=uc,
@@ -576,6 +630,37 @@ class CompVis:
                                 shape=shape,
                                 sigma_override=sigma_override,
                             )
+                        )
+                    if hires_fix:
+                        # Put the image back together
+                        temp_x = self.model.decode_first_stage(samples_ddim)
+                        temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
+                        for i, x_sample in enumerate(temp_x_samples_ddim):
+                            x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
+                            x_sample = x_sample.astype(np.uint8)
+                            temp_image = Image.fromarray(x_sample)
+
+                        # Resize Image to final dimensions
+                        temp_image = ImageOps.fit(
+                            temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
+                        )
+
+                        # Create some more noise
+                        shape = [opt_C, final_height // opt_f, final_width // opt_f]
+                        x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+
+                        # Re-initialise the image
+                        init_data_temp = init(self.model, temp_image)
+
+                        # Send image for img2img processing
+                        print("Hi-Res Fix Pass")
+                        samples_ddim = sample_img2img(
+                            init_data=init_data_temp,
+                            ddim_steps=ddim_steps,
+                            x=x,
+                            conditioning=c,
+                            unconditional_conditioning=uc,
+                            sampler_name=sampler_name,
                         )
             else:
                 init_image = init_img
