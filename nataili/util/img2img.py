@@ -259,7 +259,7 @@ def find_noise_for_image(
     verbose=False,
     normalize=False,
     generation_callback=None,
-    clip_skip=1,
+    clip_skip=None,
 ):
     image = np.array(init_image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -268,8 +268,15 @@ def find_noise_for_image(
     image = image.to(device)
     x = model.get_first_stage_encoding(model.encode_first_stage(image))
 
-    uncond = model.get_learned_conditioning([""], 1)
-    cond = model.get_learned_conditioning([prompt], clip_skip)
+    # Get full prompt embedding vector
+    # workaround for sd2.x
+    # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
+    if clip_skip is not None:
+        uncond = model.get_learned_conditioning([""], 1)
+        cond = model.get_learned_conditioning([prompt], clip_skip)
+    else:
+        uncond = model.get_learned_conditioning([""])
+        cond = model.get_learned_conditioning([prompt])
 
     s_in = x.new_ones([x.shape[0]])
     dnw = K.external.CompVisDenoiser(model)

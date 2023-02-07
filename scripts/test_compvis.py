@@ -93,6 +93,18 @@ def test():
 
         logger.info(f"Output dir: {output_dir}")
         logger.debug(f"Running inference on {model}")
+        prompt = "cute anime girl"
+        logger.info(f"Prompt: {prompt}")
+        for denoising_strength in denoising_strengths:
+            test_compvis(
+                model,
+                prompt,
+                "k_lms",
+                init_img=init_image,
+                denoising_strength=denoising_strength,
+                output_dir=output_dir,
+                clip_skip=1,
+            )
         logger.info(f"Testing {len(samplers)} samplers")
         prompt = (
             "Headshot of cybernetic female character, cybernetic implants, solid background color,"

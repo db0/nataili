@@ -113,6 +113,8 @@ class CompVis:
         tiling: bool = False,
         clip_skip=1,
     ):
+        if self.model_name.startswith("stable_diffusion_2"):
+            clip_skip = None
         if init_img:
             init_img = resize_image(resize_mode, init_img, width, height)
         if mask_mode == "mask":
@@ -246,7 +248,7 @@ class CompVis:
                 sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
                 z_enc = sampler.stochastic_encode(
                     x0,
-                    torch.tensor([t_enc_steps] * batch_size).to(self.model["model"].device),
+                    torch.tensor([t_enc_steps] * batch_size).to(self.model["device"]),
                 )
 
                 # Obliterate masked image
@@ -279,14 +281,14 @@ class CompVis:
         ):
             if sampler_name == "dpmsolver":
                 samples_ddim, _ = sampler.sample(
-                    S=ddim_steps,
+                    ddim_steps,
+                    batch_size,
+                    shape,
                     conditioning=conditioning,
                     unconditional_guidance_scale=cfg_scale,
                     unconditional_conditioning=unconditional_conditioning,
                     x_T=x,
                     karras=karras,
-                    batch_size=batch_size,
-                    shape=shape,
                     sigma_override=sigma_override,
                 )
             else:
@@ -301,7 +303,8 @@ class CompVis:
                 )
             return samples_ddim
 
-        def create_sampler_by_sampler_name(model, sampler_name):
+        def create_sampler_by_sampler_name(model):
+            nonlocal sampler_name
             if self.model_name.startswith("stable_diffusion_2"):
                 sampler = DPMSolverSampler(model)
                 sampler_name = "dpmsolver"
@@ -362,7 +365,7 @@ class CompVis:
                 for m in model.modules():
                     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                         m.padding_mode = "circular" if tiling else m._orig_padding_mode
-                sampler = create_sampler_by_sampler_name(model, sampler_name)
+                sampler = create_sampler_by_sampler_name(model)
                 if self.load_concepts and self.concepts_dir is not None:
                     prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
                     if prompt_tokens:
@@ -377,12 +380,15 @@ class CompVis:
                             print(f"Iteration: {n+1}/{n_iter}")
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-
-                            uc = model.get_learned_conditioning(len(prompts) * [negprompt], 1)
-
+                            if clip_skip is not None:
+                                uc = model.get_learned_conditioning(len(prompts) * [negprompt], 1)
+                            else:
+                                uc = model.get_learned_conditioning(len(prompts) * [negprompt])
+                                
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
 
+                            # no need to apply the fix here, it's applied internally
                             c = torch.cat(
                                 [
                                     get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
@@ -393,6 +399,7 @@ class CompVis:
                             opt_C = 4
                             opt_f = 8
                             shape = [opt_C, height // opt_f, width // opt_f]
+                            # find_noise_for_image also applies the fix internally
                             if noise_mode in ["find", "find_and_matched"]:
                                 x = torch.cat(
                                     batch_size
@@ -448,7 +455,10 @@ class CompVis:
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                             cond = {}
-                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
+                            if clip_skip is not None:
+                                cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
+                            else:
+                                cond["c_crossattn"] = [model.get_learned_conditioning(prompts)]
                             init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                             init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                             cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
@@ -489,7 +499,7 @@ class CompVis:
             for m in self.model["model"].modules():
                 if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                     m.padding_mode = "circular" if tiling else m._orig_padding_mode
-            sampler = create_sampler_by_sampler_name(self.model["model"], sampler_name)
+            sampler = create_sampler_by_sampler_name(self.model["model"])
             if self.load_concepts and self.concepts_dir is not None:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
                 if prompt_tokens:
@@ -504,11 +514,15 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
-                        uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt], 1)
+                        if clip_skip is not None:
+                            uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt], 1)
+                        else:
+                            uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt])
 
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
 
+                        # no need to apply the fix here, it's applied internally
                         c = torch.cat(
                             [
                                 get_learned_conditioning_with_prompt_weights(prompt, self.model["model"], clip_skip)
@@ -519,6 +533,7 @@ class CompVis:
                         opt_C = 4
                         opt_f = 8
                         shape = [opt_C, height // opt_f, width // opt_f]
+                        # find_noise_for_image also applies the fix internally
                         if noise_mode in ["find", "find_and_matched"]:
                             x = torch.cat(
                                 batch_size
@@ -572,7 +587,10 @@ class CompVis:
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                         cond = {}
-                        cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts, clip_skip)]
+                        if clip_skip is not None:
+                            cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts, clip_skip)]
+                        else:
+                            cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts)]
                         init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                         init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                         cond["c_concat"] = [self.model["model"].encode_first_stage(init_image).mode()]
