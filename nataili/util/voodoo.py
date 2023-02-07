@@ -24,7 +24,7 @@ import ray
 import torch
 
 from nataili.aitemplate import Model
-from nataili import disable_local_ray_temp
+from nataili import enable_local_ray_temp
 
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath("./ray")
