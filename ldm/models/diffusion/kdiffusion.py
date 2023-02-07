@@ -2,7 +2,8 @@ import einops
 import k_diffusion as K
 import torch
 import torch.nn as nn
-
+import warnings
+warnings.filterwarnings('ignore')
 
 class KDiffusionSampler:
     def __init__(self, m, sampler, callback=None):

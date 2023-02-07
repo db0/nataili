@@ -19,6 +19,7 @@ import contextlib
 import copy
 import os
 import shutil
+import warnings
 from typing import Dict, List, Tuple, TypeVar
 
 import ray
@@ -27,6 +28,8 @@ import torch
 from nataili import enable_local_ray_temp
 from nataili.aitemplate import Model
 from nataili.util.logger import logger
+
+warnings.filterwarnings("ignore")
 
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath("./ray")
