@@ -27,7 +27,7 @@ import torch
 
 from nataili.aitemplate import Model
 from nataili import enable_local_ray_temp
-from nataili.util import logger
+from nataili.util.logger import logger
 
 
 if enable_local_ray_temp.active:
