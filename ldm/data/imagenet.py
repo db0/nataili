@@ -19,6 +19,7 @@ from torch.utils.data import Dataset, Subset
 from tqdm import tqdm
 
 from ldm.modules.image_degradation import degradation_fn_bsr, degradation_fn_bsr_light
+from nataili import disable_progress
 
 
 def synset2idx(path_to_yaml="data/index_synset.yaml"):
@@ -182,7 +183,7 @@ class ImageNetTrain(ImageNetBase):
 
                 print("Extracting sub-tars.")
                 subpaths = sorted(glob.glob(os.path.join(datadir, "*.tar")))
-                for subpath in tqdm(subpaths):
+                for subpath in tqdm(subpaths, disable=disable_progress.active):
                     subdir = subpath[:-len(".tar")]
                     os.makedirs(subdir, exist_ok=True)
                     with tarfile.open(subpath, "r:") as tar:

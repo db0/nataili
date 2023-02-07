@@ -29,6 +29,7 @@ from ldm2.modules.distributions.distributions import normal_kl, DiagonalGaussian
 from ldm2.models.autoencoder import IdentityFirstStage, AutoencoderKL
 from ldm2.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
 from ldm2.models.diffusion.ddim import DDIMSampler
+from nataili import disable_progress
 
 
 __conditioning_keys__ = {'concat': 'c_concat',
@@ -226,7 +227,8 @@ class DDPM(pl.LightningModule):
                     itertools.chain(self.named_parameters(),
                                     self.named_buffers()),
                     desc="Fitting old weights to new weights",
-                    total=n_params
+                    total=n_params,
+                    disable=disable_progress.active
             ):
                 if not name in sd:
                     continue
@@ -338,7 +340,8 @@ class DDPM(pl.LightningModule):
         b = shape[0]
         img = torch.randn(shape, device=device)
         intermediates = [img]
-        for i in tqdm(reversed(range(0, self.num_timesteps)), desc='Sampling t', total=self.num_timesteps):
+        for i in tqdm(reversed(range(0, self.num_timesteps)), desc='Sampling t', 
+                    total=self.num_timesteps, disable=disable_progress.active):
             img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long),
                                 clip_denoised=self.clip_denoised)
             if i % self.log_every_t == 0 or i == self.num_timesteps - 1:
@@ -643,7 +646,7 @@ class LatentDiffusion(DDPM):
 
     def _get_denoise_row_from_list(self, samples, desc='', force_no_decoder_quantization=False):
         denoise_row = []
-        for zd in tqdm(samples, desc=desc):
+        for zd in tqdm(samples, desc=desc, disable=disable_progress.active):
             denoise_row.append(self.decode_first_stage(zd.to(self.device),
                                                        force_not_quantize=force_no_decoder_quantization))
         n_imgs_per_row = len(denoise_row)
@@ -1010,7 +1013,7 @@ class LatentDiffusion(DDPM):
         if start_T is not None:
             timesteps = min(timesteps, start_T)
         iterator = tqdm(reversed(range(0, timesteps)), desc='Progressive Generation',
-                        total=timesteps) if verbose else reversed(
+                        total=timesteps, disable=disable_progress.active) if verbose else reversed(
             range(0, timesteps))
         if type(temperature) == float:
             temperature = [temperature] * timesteps
@@ -1059,7 +1062,8 @@ class LatentDiffusion(DDPM):
 
         if start_T is not None:
             timesteps = min(timesteps, start_T)
-        iterator = tqdm(reversed(range(0, timesteps)), desc='Sampling t', total=timesteps) if verbose else reversed(
+        iterator = tqdm(reversed(range(0, timesteps)), desc='Sampling t', 
+                        total=timesteps, disable=disable_progress.active) if verbose else reversed(
             range(0, timesteps))
 
         if mask is not None:

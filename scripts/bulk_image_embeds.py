@@ -3,6 +3,7 @@ import os
 import PIL
 from tqdm import tqdm
 
+from nataili import disable_progress
 from nataili import ModelManager, logger
 from nataili.clip import ImageEmbed
 from nataili.cache import Cache
@@ -27,7 +28,7 @@ for file in os.listdir(directory):
     if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg") or file.endswith(".webp"):
         images.append({"filename": file})
 
-for i in tqdm(range(0, len(images), batch_size)):
+for i in tqdm(range(0, len(images), batch_size), disable=disable_progress.active):
     batch = images[i:i+batch_size]
     for image in batch:
         image['pil_image'] = PIL.Image.open(f"{directory}/{image['filename']}").convert("RGB")

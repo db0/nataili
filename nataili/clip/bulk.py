@@ -24,6 +24,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
+from nataili import disable_progress
 from nataili.cache import Cache
 from nataili.clip.image import ImageEmbed
 from nataili.model_manager.clip import ClipModelManager
@@ -70,5 +71,5 @@ class BulkImageEmbedder:
         logger.info(f"Found {len(directory_list)} files. Filtering...")
         filtered_list = self.cache_image.filter_list(directory_list)
         logger.info(f"Found {len(filtered_list)} files to embed.")
-        for image in tqdm(filtered_list):
+        for image in tqdm(filtered_list, disable=disable_progress.active):
             self.insert(image, input_directory)

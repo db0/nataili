@@ -12,6 +12,7 @@ from ldm.modules.diffusionmodules.util import (
     make_ddim_timesteps,
     noise_like,
 )
+from nataili import disable_progress
 
 
 class DDIMSampler(object):
@@ -140,7 +141,7 @@ class DDIMSampler(object):
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
+        iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps, disable=disable_progress.active)
 
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
@@ -235,7 +236,7 @@ class DDIMSampler(object):
         total_steps = timesteps.shape[0]
         print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        iterator = tqdm(time_range, desc='Decoding image', total=total_steps, disable=disable_progress.active)
         x_dec = x_latent
         for i, step in enumerate(iterator):
             index = total_steps - i - 1

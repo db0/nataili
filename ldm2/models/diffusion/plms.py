@@ -7,6 +7,7 @@ from functools import partial
 
 from ldm2.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like
 from ldm2.models.diffusion.sampling_util import norm_thresholding
+from nataili import disable_progress
 
 
 class PLMSSampler(object):
@@ -140,7 +141,7 @@ class PLMSSampler(object):
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         print(f"Running PLMS Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range, desc='PLMS Sampler', total=total_steps)
+        iterator = tqdm(time_range, desc='PLMS Sampler', total=total_steps, disable=disable_progress.active)
         old_eps = []
 
         for i, step in enumerate(iterator):

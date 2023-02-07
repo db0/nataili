@@ -24,6 +24,8 @@ import tqdm
 from colorama import Fore, Style
 from PIL import Image
 
+from nataili import disable_progress
+
 from . import aspects as aspects
 from .image_train_item import ImageTrainItem
 
@@ -101,7 +103,7 @@ class DataLoaderMultiAspect:
         """
         decorated_image_train_items = []
 
-        for pathname in tqdm.tqdm(image_paths):
+        for pathname in tqdm.tqdm(image_paths, disable=disable_progress.active):
             caption_from_filename = os.path.splitext(os.path.basename(pathname))[0].split("_")[0]
 
             txt_file_path = os.path.splitext(pathname)[0] + ".txt"
