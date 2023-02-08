@@ -32,6 +32,7 @@ from ldm2.models.diffusion.dpm_solver import DPMSolverSampler
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from nataili import disable_progress
 from nataili.stable_diffusion.prompt_weights import get_learned_conditioning_with_prompt_weights
 from nataili.util.cache import torch_gc
 from nataili.util.cast import autocast_cpu, autocast_cuda
@@ -264,7 +265,7 @@ class CompVis:
                         "x0": x0,
                         "xi": xi,
                     },
-                    disable=False,
+                    disable=disable_progress.active,
                 )
             else:
 
