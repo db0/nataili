@@ -63,9 +63,8 @@ class CompVisModelManager(BaseModelManager):
             return False
         if model_name not in self.available_models:
             logger.error(f"{model_name} not available")
-            logger.init_ok(f"Downloading {model_name}", status="Downloading")
             self.download_model(model_name)
-            logger.init_ok(f"{model_name} downloaded", status="Downloading")
+            logger.init_ok(f"{model_name}", status="Downloaded")
         if model_name not in self.loaded_models:
             if not self.cuda_available:
                 cpu_only = True
@@ -79,9 +78,8 @@ class CompVisModelManager(BaseModelManager):
                 cpu_only=cpu_only,
                 voodoo=voodoo,
             )
-            logger.init_ok(f"Loading {model_name}", status="Success")
             toc = time.time()
-            logger.init_ok(f"Loading {model_name}: Took {toc-tic} seconds", status="Success")
+            logger.init_ok(f"{model_name}: {round(toc-tic,2)} seconds", status="Loaded")
             return True
 
     def load_model_from_config(self, model_path="", config_path="", map_location="cpu"):
