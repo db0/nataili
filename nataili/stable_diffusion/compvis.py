@@ -332,7 +332,7 @@ class CompVis:
             nonlocal sampler_name
             if self.model_baseline == "stable diffusion 2":
                 sampler_name = "dpmsolver"
-            elif sampler_name == "PLMS":
+            if sampler_name == "PLMS":
                 sampler = PLMSSampler(model)
             elif sampler_name == "DDIM":
                 sampler = DDIMSampler(model)
