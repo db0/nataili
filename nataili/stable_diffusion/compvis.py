@@ -402,7 +402,7 @@ class CompVis:
                 if self.model_name != "pix2pix":
                     with torch.no_grad():
                         for n in range(n_iter):
-                            print(f"Iteration: {n+1}/{n_iter}")
+                            logger.debug(f"Iteration: {n+1}/{n_iter}")
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                             if clip_skip is not None:
@@ -505,7 +505,7 @@ class CompVis:
                     null_token = model.get_learned_conditioning([""], 1)
                     with torch.no_grad():
                         for n in range(n_iter):
-                            print(f"Iteration: {n+1}/{n_iter}")
+                            logger.debug(f"Iteration: {n+1}/{n_iter}")
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
@@ -565,7 +565,7 @@ class CompVis:
             if self.model_name != "pix2pix":
                 with torch.no_grad():
                     for n in range(n_iter):
-                        print(f"Iteration: {n+1}/{n_iter}")
+                        logger.debug(f"Iteration: {n+1}/{n_iter}")
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
@@ -669,7 +669,7 @@ class CompVis:
                 null_token = self.model["model"].get_learned_conditioning([""], 1)
                 with torch.no_grad():
                     for n in range(n_iter):
-                        print(f"Iteration: {n+1}/{n_iter}")
+                        logger.debug(f"Iteration: {n+1}/{n_iter}")
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 

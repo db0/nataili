@@ -177,7 +177,7 @@ class inpainting:
 
         with torch.no_grad(), precision_scope("cuda"):
             for n in range(batch_size):
-                print(f"Iteration: {n+1}/{batch_size}")
+                logger.debug(f"Iteration: {n+1}/{batch_size}")
 
                 prompt = all_prompts[n]
                 seed = all_seeds[n]
