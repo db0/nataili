@@ -28,6 +28,7 @@ from nataili import disable_voodoo
 from nataili.util.cache import torch_gc
 from nataili.util.cast import autocast_cuda
 from nataili.util.get_next_sequence_number import get_next_sequence_number
+from nataili.util.logger import logger
 from nataili.util.process_prompt_tokens import process_prompt_tokens
 from nataili.util.save_sample import save_sample
 from nataili.util.seed_to_int import seed_to_int
@@ -167,7 +168,7 @@ class Depth2Img:
 
         with torch.no_grad(), precision_scope("cuda"):
             for n in range(batch_size):
-                print(f"Iteration: {n+1}/{batch_size}")
+                logger.debug(f"Iteration: {n+1}/{batch_size}")
 
                 prompt = all_prompts[n]
                 seed = all_seeds[n]
