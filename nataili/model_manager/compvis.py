@@ -158,8 +158,8 @@ class CompVisModelManager(BaseModelManager):
             half_precision = False
         else:
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
-        logger.info(f"Loading model {model_name} on {device}")
-        logger.info(f"Model path: {ckpt_path}")
+        logger.debug(f"Loading model {model_name} on {device}")
+        logger.debug(f"Model path: {ckpt_path}")
         model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
         model = model.half() if half_precision else model
         if voodoo:
