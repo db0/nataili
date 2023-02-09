@@ -206,6 +206,45 @@ class BaseModelManager:
                 return False
         return True
 
+    def get_file_hash(self, file_name):
+        # Bail out if the source file doesn't exist
+        if not os.path.isfile(file_name):
+            return
+
+        # Check if we have a cached md5 hash for the source file
+        # and use that unless our source file is newer than our hash
+        md5_file = f"{os.path.splitext(file_name)[0]}.md5"
+        source_timestamp = os.path.getmtime(file_name)
+        if os.path.isfile(md5_file):
+            hash_timestamp = os.path.getmtime(md5_file)
+        else:
+            hash_timestamp = 0
+        if hash_timestamp > source_timestamp:
+            # Use our cached hash
+            with open(md5_file, "rt") as handle:
+                md5_hash = handle.read().split()[0]
+            return md5_hash
+
+        # Calculate the hash of the source file
+        with open(file_name, "rb") as file_to_check:
+            file_hash = hashlib.md5()
+            while True:
+                chunk = file_to_check.read(8192)  # Changed just because it broke pylint
+                if not chunk:
+                    break
+                file_hash.update(chunk)
+        md5_hash = file_hash.hexdigest()
+
+        # Cache this md5 hash we just calculated. Use md5sum format files
+        # so we can also use OS tools to manipulate these md5 files
+        try:
+            with open(md5_file, "wt") as handle:
+                handle.write(f"{md5_hash} *{os.path.basename(md5_file)}")
+        except (OSError, PermissionError):
+            logger.debug("Could not write to md5sum file, ignoring")
+
+        return md5_hash
+
     def validate_file(self, file_details):
         """
         :param file_details: A single file from the model's files list
@@ -215,16 +254,10 @@ class BaseModelManager:
         if "md5sum" in file_details:
             full_path = f"{self.path}/{file_details['path']}"
             logger.debug(f"Getting md5sum of {full_path}")
-            with open(full_path, "rb") as file_to_check:
-                file_hash = hashlib.md5()
-                while True:
-                    chunk = file_to_check.read(8192)  # Changed just because it broke pylint
-                    if not chunk:
-                        break
-                    file_hash.update(chunk)
-            logger.debug(f"md5sum: {file_hash.hexdigest()}")
+            file_hash = self.get_file_hash(full_path)
+            logger.debug(f"md5sum: {file_hash}")
             logger.debug(f"Expected: {file_details['md5sum']}")
-            if file_details["md5sum"] != file_hash.hexdigest():
+            if file_details["md5sum"] != file_hash:
                 return False
             else:
                 return True
