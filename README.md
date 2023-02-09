@@ -1,4 +1,4 @@
-# Notice: Stable Horde worker has moved to a [new repo](https://github.com/db0/AI-Horde-Worker). Stable Horde worker is using v0.0.1 Nataili and will be updated soon:tm:
+# Notice: Looking for [Stable Horde worker](https://github.com/db0/AI-Horde-Worker)? 
 
 
 # Nataili: Multimodal AI Python Library
