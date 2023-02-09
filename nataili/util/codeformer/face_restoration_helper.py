@@ -13,6 +13,7 @@ from torchvision.transforms.functional import normalize
 from nataili.util.codeformer.init_detection import init_detection_model
 from nataili.util.codeformer.init_parsing import init_parsing_model
 from nataili.util.codeformer.misc import bgr2gray, img2tensor, imwrite, is_gray
+from nataili.util.logger import logger
 
 
 def get_largest_face(det_faces, h, w):
@@ -144,7 +145,7 @@ class FaceRestoreHelper(object):
         self.input_img = img
         self.is_gray = is_gray(img, threshold=5)
         if self.is_gray:
-            print("Grayscale input: True")
+            logger.debug("Grayscale input: True")
 
         if min(self.input_img.shape[:2]) < 512:
             f = 512.0 / min(self.input_img.shape[:2])

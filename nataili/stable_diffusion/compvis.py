@@ -488,7 +488,7 @@ class CompVis:
                             init_data_temp = init(model, temp_image)
 
                             # Send image for img2img processing
-                            print("Hi-Res Fix Pass")
+                            logger.debug("Hi-Res Fix Pass")
                             samples_ddim = sample_img2img(
                                 init_data=init_data_temp,
                                 ddim_steps=ddim_steps,
