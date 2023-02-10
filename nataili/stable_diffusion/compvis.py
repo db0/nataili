@@ -225,7 +225,18 @@ class CompVis:
                 mask,
             )
 
-        def sample_img2img(init_data, ddim_steps, x, conditioning, unconditional_conditioning, sampler_name):
+        def sample_img2img(
+            init_data,
+            ddim_steps,
+            x,
+            conditioning,
+            unconditional_conditioning,
+            sampler_name,
+            batch_size=1,
+            shape=None,
+            karras=False,
+            sigma_override: dict = None,
+        ):
             nonlocal sampler
             t_enc_steps = t_enc
             if hires_fix:
@@ -239,33 +250,15 @@ class CompVis:
                 obliterate = True
 
             if sampler_name != "DDIM":
-                x0, z_mask = init_data
-
-                sigmas = sampler.model_wrap.get_sigmas(ddim_steps)
-                noise = x * sigmas[ddim_steps - t_enc_steps - 1]
-
-                xi = x0 + noise
-
-                # Obliterate masked image
-                if z_mask is not None and obliterate:
-                    random = torch.randn(z_mask.shape, device=xi.device)
-                    xi = (z_mask * noise) + ((1 - z_mask) * xi)
-
-                sigma_sched = sigmas[ddim_steps - t_enc_steps - 1 :]
-                model_wrap_cfg = CFGMaskedDenoiser(sampler.model_wrap)
-                samples_ddim = K.sampling.__dict__[f"sample_{sampler.get_sampler_name()}"](
-                    model_wrap_cfg,
-                    xi,
-                    sigma_sched,
-                    extra_args={
-                        "cond": conditioning,
-                        "uncond": unconditional_conditioning,
-                        "cond_scale": cfg_scale,
-                        "mask": z_mask,
-                        "x0": x0,
-                        "xi": xi,
-                    },
-                    disable=disable_progress.active,
+                samples_ddim, _ = sampler.sample_img2img(
+                    init_data=init_data,
+                    S=ddim_steps,
+                    t_enc=t_enc_steps,
+                    obliterate=obliterate,
+                    conditioning=conditioning,
+                    unconditional_conditioning=unconditional_conditioning,
+                    unconditional_guidance_scale=cfg_scale,
+                    x_T=x,
                 )
             else:
 
