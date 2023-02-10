@@ -1,19 +1,22 @@
-# Notice: Looking for [Stable Horde worker](https://github.com/db0/AI-Horde-Worker)? 
-
-
 # Nataili: Multimodal AI Python Library
 
 Nataili is a Python library that provides a set of tools to build multimodal AI applications. It provides a set of tools to build multimodal AI applications, including:
 
+* AITemplate: Fast diffusion
 * BLIP: Image captioning
-* CLIP: Image interrogation
+* CLIP: Interrogation (ranking, similarity), Embedding (text, image) with cache support
 * CLIP+MLP Predictor
+* CodeFormer: Post-processing and super-resolution for faces
 * ESRGAN: Image super-resolution
 * GFPGAN: Post-processing for faces
-* CodeFormer: Post-processing and super-resolution for faces
+* LAION-CoCa: Image captioning
 * Stable Diffusion: Image generation
 
 It is designed to be modular, so you can use the tools you need and ignore the rest.
+
+## Projects using Nataili
+
+* [Stable Horde worker](https://github.com/db0/AI-Horde-Worker)
 
 ## Installation
 
