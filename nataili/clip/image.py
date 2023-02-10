@@ -44,17 +44,29 @@ class ImageEmbed:
         self.executor = ThreadPoolExecutor(max_workers=1024, thread_name_prefix="SaveThread")
 
     @autocast_cuda
-    def _batch(self, pil_images):
+    def _batch(self, pil_images: list):
         # logger.info(pil_images)
         for pil_image in pil_images:
             # logger.info(pil_image)
             pil_image["hash"] = hashlib.sha256(pil_image["pil_image"].tobytes()).hexdigest()
         preprocess_images = []
+        to_remove = []
         with torch.no_grad():
             for pil_image in pil_images:
-                preprocess_images.append(
-                    self.model["preprocess"](pil_image["pil_image"]).unsqueeze(0).to(self.model["device"])
-                )
+                try:
+                    preprocess_images.append(
+                        self.model["preprocess"](pil_image["pil_image"]).unsqueeze(0).to(self.model["device"])
+                    )
+                except RuntimeError as e:
+                    logger.error(e)
+                    logger.error(pil_image)
+                    to_remove.append(pil_image)
+                    continue
+            for pil_image in to_remove:
+                pil_images.remove(pil_image)
+            assert len(preprocess_images) == len(pil_images)
+            if len(preprocess_images) == 0:
+                return
             preprocess_images = torch.cat(preprocess_images, dim=0)
             image_features = self.model["model"].encode_image(preprocess_images)
             for image_embed_array, pil_image in zip(image_features, pil_images):
