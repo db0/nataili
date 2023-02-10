@@ -1,3 +1,33 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
-setup()
+setup(
+    name="nataili",
+    version="0.2.35",
+    description="",
+    packages=find_packages(),
+    install_requires=[
+        "torch",
+        "taming-transformers-rom1504",
+        "k-diffusion",
+        "omegaconf",
+        "diffusers",
+        "fairscale",
+        "tqdm",
+        "python-slugify",
+        "einops",
+        "facexlib",
+        "kornia",
+        "opencv-python-headless",
+        "basicsr",
+        "gfpgan",
+        "realesrgan",
+        "loguru",
+        "pydantic",
+        "bitsandbytes",
+        "transformers",
+        "open-clip-torch",
+        "pytorch-lightning",
+        "accelerate",
+        "ray",
+    ],
+)
