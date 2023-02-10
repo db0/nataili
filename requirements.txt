@@ -1,6 +1,6 @@
 torch
 taming-transformers-rom1504
-k-diffusion @ git+https://github.com/crowsonkb/k-diffusion.git
+k-diffusion
 omegaconf
 diffusers
 fairscale
