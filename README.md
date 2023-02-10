@@ -11,6 +11,7 @@ Nataili is a Python library that provides a set of tools to build multimodal AI 
 * GFPGAN: Post-processing for faces
 * LAION-CoCa: Image captioning
 * Stable Diffusion: Image generation
+* SD Upscaler: latent diffusion upscaler for Stable Diffusion's autoencoder
 
 It is designed to be modular, so you can use the tools you need and ignore the rest.
 
