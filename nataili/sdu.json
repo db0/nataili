@@ -1,0 +1,53 @@
+{
+"Stable Diffusion Upscaler": {
+    "name": "Stable Diffusion Upscaler",
+    "type": "sdu",
+    "config": {
+      "files": [
+        {
+          "path": "config_laion_text_cond_latent_upscaler_2.json"
+        },
+        {
+          "path": "laion_text_cond_latent_upscaler_2_1_00470000_slim.pth"
+        },
+        {
+          "path": "config.yaml"
+        },
+        {
+          "path": "vae-ft-mse-840000-ema-pruned.ckpt"
+        },
+        {
+          "path": "vae-ft-ema-560000-ema-pruned.ckpt"
+        }
+      ],
+      "download": [
+        {
+          "file_name": "config_laion_text_cond_latent_upscaler_2.json",
+          "file_path": "",
+          "file_url": "https://models.rivershavewings.workers.dev/config_laion_text_cond_latent_upscaler_2.json"
+        },
+        {
+          "file_name": "laion_text_cond_latent_upscaler_2_1_00470000_slim.pth",
+          "file_path": "",
+          "file_url": "https://models.rivershavewings.workers.dev/laion_text_cond_latent_upscaler_2_1_00470000_slim.pth"
+        },
+        {
+          "file_name": "config.yaml",
+          "file_path": "",
+          "file_url": "https://raw.githubusercontent.com/CompVis/latent-diffusion/main/models/first_stage_models/kl-f8/config.yaml"
+        },
+        {
+          "file_name": "vae-ft-mse-840000-ema-pruned.ckpt",
+          "file_path": "",
+          "file_url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.ckpt"
+        },
+        {
+          "file_name": "vae-ft-ema-560000-ema-pruned.ckpt",
+          "file_path": "",
+          "file_url": "https://huggingface.co/stabilityai/sd-vae-ft-ema-original/resolve/main/vae-ft-ema-560000-ema-pruned.ckpt"
+        }
+      ]
+    },
+    "available": false
+  }
+}
