@@ -1,6 +1,9 @@
 name: Nataili build and publish
 
-on: push
+on:
+  push:
+    tags:
+      - "v*"
 jobs:
   build-n-publish:
     name: Nataili build and publish
