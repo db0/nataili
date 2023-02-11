@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nataili",
-    version="0.2.35",
+    version="0.2.36",
     description="",
     packages=find_packages(),
     install_requires=[

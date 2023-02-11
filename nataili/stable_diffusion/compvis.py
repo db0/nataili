@@ -627,7 +627,7 @@ class CompVis:
                         )
                     if hires_fix:
                         # Put the image back together
-                        temp_x = self.model.decode_first_stage(samples_ddim)
+                        temp_x = self.model["model"].decode_first_stage(samples_ddim)
                         temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
                         for i, x_sample in enumerate(temp_x_samples_ddim):
                             x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
@@ -644,7 +644,7 @@ class CompVis:
                         x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
 
                         # Re-initialise the image
-                        init_data_temp = init(self.model, temp_image)
+                        init_data_temp = init(self.model["model"], temp_image)
 
                         # Send image for img2img processing
                         print("Hi-Res Fix Pass")
