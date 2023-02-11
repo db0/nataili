@@ -1,4 +1,7 @@
 from setuptools import find_packages, setup
+import os
+os.environ['PIP_EXTRA_INDEX_URL'] = 'https://download.pytorch.org/whl/cu117'
+
 
 setup(
     name="nataili",
@@ -7,7 +10,6 @@ setup(
     packages=find_packages(),
     install_requires=[
         "torch",
-        "taming-transformers-rom1504",
         "k-diffusion",
         "omegaconf",
         "diffusers",

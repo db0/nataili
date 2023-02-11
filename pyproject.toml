@@ -14,7 +14,7 @@ max-line-length=500
 line-length = 500
 
 [build-system]
-requires = ["setuptools>=64.0"]
+requires = ["setuptools>=64.0", "pip>=20.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -43,3 +43,7 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages]
 find = {}
+
+[options.index-client]
+extra-index-urls = [    "https://download.pytorch.org/whl/cu117"]
+
