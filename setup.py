@@ -1,6 +1,8 @@
-from setuptools import find_packages, setup
 import os
-os.environ['PIP_EXTRA_INDEX_URL'] = 'https://download.pytorch.org/whl/cu117'
+
+from setuptools import find_packages, setup
+
+os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cu117"
 
 
 setup(
@@ -32,4 +34,9 @@ setup(
         "accelerate",
         "ray",
     ],
+    entry_points={
+        "console_scripts": [
+            "nataili_ui_coca = nataili.ui.gradio.coca:main",
+        ]
+    },
 )

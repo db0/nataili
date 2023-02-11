@@ -47,3 +47,5 @@ find = {}
 [options.index-client]
 extra-index-urls = [    "https://download.pytorch.org/whl/cu117"]
 
+[project.scripts]
+nataili_ui_coca = "nataili.ui.gradio.coca:main"
