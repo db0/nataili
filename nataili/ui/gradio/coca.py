@@ -24,15 +24,20 @@ class CoCaUI(GradioUI):
             description,
             thumbnail,
         )
+        self.coca = None
+
+    def init(self):
+        if self.coca is None:
+            self.coca = CoCa(
+                self.model_manager.loaded_models[self.model_name]["model"],
+                self.model_manager.loaded_models[self.model_name]["transform"],
+                self.model_manager.loaded_models[self.model_name]["device"],
+                self.model_manager.loaded_models[self.model_name]["half_precision"],
+            )
 
     def predict(self, image: Image.Image):
-        coca = CoCa(
-            self.model_manager.loaded_models[self.model_name]["model"],
-            self.model_manager.loaded_models[self.model_name]["transform"],
-            self.model_manager.loaded_models[self.model_name]["device"],
-            self.model_manager.loaded_models[self.model_name]["half_precision"],
-        )
-        return coca(image)
+        self.init()
+        return self.coca(image)
 
     def __call__(self):
         self.launch(self.predict)

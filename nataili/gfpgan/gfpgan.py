@@ -36,7 +36,7 @@ class gfpgan(PostProcessor):
         :param kwargs: strength
         :return: PIL Image
         """
-        strength = kwargs.get("strength", 1.0)
+        strength = kwargs.get("strength", 0.5)
         _, _, output = self.model["model"].enhance(img_array, weight=strength)
         output_array = np.array(output)
         output_image = Image.fromarray(output_array)

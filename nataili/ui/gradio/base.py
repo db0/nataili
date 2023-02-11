@@ -56,4 +56,4 @@ class GradioUI:
             allow_flagging="never",
         )
 
-        interface.launch()
+        interface.launch(show_error=True, quiet=False, debug=True)

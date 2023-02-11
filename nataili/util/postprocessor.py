@@ -42,6 +42,7 @@ class PostProcessor:
         self.output_images.append(output_image)
         if self.save_individual_images:
             self.store_to_disk(input_path, output_image)
+        return output_image
 
     # This should be overriden by each class
     def process(self, img, img_array, **kwargs):
