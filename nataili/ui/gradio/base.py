@@ -15,6 +15,8 @@ from nataili.model_manager.safety_checker import SafetyCheckerModelManager
 class GradioUI:
     def __init__(
         self,
+        inputs,
+        outputs,
         model_manager_class: Union[
             BlipModelManager,
             ClipModelManager,
@@ -24,13 +26,11 @@ class GradioUI:
             EsrganModelManager,
             GfpganModelManager,
             SafetyCheckerModelManager,
-        ],
-        model_name: str,
-        inputs,
-        outputs,
-        title: str,
-        description: str,
-        thumbnail: str,
+        ] = None,
+        model_name: str = "",
+        title: str = "",
+        description: str = "",
+        thumbnail: str = "",
     ):
         self.model_manager_class = model_manager_class
         self.model_name = model_name
@@ -42,8 +42,9 @@ class GradioUI:
         self.model_manager = None
 
     def launch(self, predict_function: Callable):
-        self.model_manager = self.model_manager_class()
-        self.model_manager.load(self.model_name)
+        if self.model_manager_class is not None and self.model_name != "":
+            self.model_manager = self.model_manager_class()
+            self.model_manager.load(self.model_name)
 
         interface = gr.Interface(
             predict_function,

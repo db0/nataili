@@ -17,13 +17,13 @@ class CodeformerUI(GradioUI):
         description = "Face fixing and super resolution with CodeFormers"
         thumbnail = ""
         super().__init__(
-            model_manager_class,
-            model_name,
-            inputs,
-            outputs,
-            title,
-            description,
-            thumbnail,
+            model_manager_class=model_manager_class,
+            model_name=model_name,
+            inputs=inputs,
+            outputs=outputs,
+            title=title,
+            description=description,
+            thumbnail=thumbnail,
         )
         self.codeformer = None
 

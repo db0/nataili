@@ -48,6 +48,7 @@ class DreamboothLoRA:
         self.text_encoder = None
         self.vae = None
         self.LoRA = LoRA()
+        self.progress_bar = None
 
     def train(
         self,
@@ -85,7 +86,9 @@ class DreamboothLoRA:
         mixed_precision: Optional[str] = "no",
         resume_unet: Optional[str] = None,
         resume_text_encoder: Optional[str] = None,
+        progress_bar= None
     ):
+        self.progress_bar = progress_bar
         self.accelerator = Accelerator(
             gradient_accumulation_steps=gradient_accumulation_steps,
             mixed_precision=mixed_precision,
@@ -287,8 +290,11 @@ class DreamboothLoRA:
         self.logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
         self.logger.info(f"  Total optimization steps = {max_train_steps}")
         # Only show the progress bar once on each machine.
-        progress_bar = tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active)
-        progress_bar.set_description("Steps")
+        if self.progress_bar is not None:
+            progress_bar = self.progress_bar.tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active, desc="Steps")
+        else:
+            progress_bar = tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active)
+            progress_bar.set_description("Steps")
         global_step = 0
         last_save = 0
         for epoch in range(num_train_epochs):
@@ -421,7 +427,8 @@ class DreamboothLoRA:
                             last_save = global_step
 
                 logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
+                if self.progress_bar is None:
+                    progress_bar.set_postfix(**logs)
 
                 if global_step >= max_train_steps:
                     break
@@ -454,4 +461,4 @@ class DreamboothLoRA:
                 output_dir + "/lora_weight.safetensors",
             )
 
-        self.accelerator.end_training()
+        return output_dir + "/lora_weight.safetensors"

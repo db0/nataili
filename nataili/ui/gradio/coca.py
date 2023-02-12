@@ -16,13 +16,13 @@ class CoCaUI(GradioUI):
         description = "Image Captioning with LAION-CoCa"
         thumbnail = ""
         super().__init__(
-            model_manager_class,
-            model_name,
-            inputs,
-            outputs,
-            title,
-            description,
-            thumbnail,
+            model_manager_class=model_manager_class,
+            model_name=model_name,
+            inputs=inputs,
+            outputs=outputs,
+            title=title,
+            description=description,
+            thumbnail=thumbnail,
         )
         self.coca = None
 
