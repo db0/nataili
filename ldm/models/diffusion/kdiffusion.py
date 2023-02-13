@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import warnings
 from nataili import disable_progress
+from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 
 warnings.filterwarnings("ignore")
 
@@ -64,6 +65,10 @@ class KDiffusionSampler:
         if z_mask is not None and obliterate:
             random = torch.randn(z_mask.shape, device=xi.device)
             xi = (z_mask * x) + ((1 - z_mask) * xi)  # NOTE: random is not used here. Check if this is correct.
+        
+        if conditioning.shape[1] != unconditional_conditioning.shape[1]:
+            conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
+
         if extra_args is None:
             model_wrap_cfg = CFGMaskedDenoiser(self.model_wrap)
         else:
@@ -152,6 +157,8 @@ class KDiffusionSampler:
         else:
             sigmas = self.model_wrap.get_sigmas(S)
         x = x_T * sigmas[0]
+        if conditioning.shape[1] != unconditional_conditioning.shape[1]:
+            conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
         if extra_args is None:
             model_wrap_cfg = CFGDenoiser(self.model_wrap)
         else:

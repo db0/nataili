@@ -3,6 +3,7 @@ from functools import partial
 
 import clip
 import kornia
+import math
 import torch
 import torch.nn as nn
 from einops import rearrange, repeat
@@ -12,6 +13,7 @@ from ldm.modules.x_transformer import (  # TODO: can we directly rely on lucidra
     Encoder,
     TransformerWrapper,
 )
+from nataili.util.logger import logger
 
 
 class AbstractEncoder(nn.Module):
@@ -152,17 +154,38 @@ class FrozenCLIPEmbedder(AbstractEncoder):
             self.transformer = CLIPTextModel.from_pretrained(version)
         self.device = device
         self.max_length = max_length
+        self.chunk_length = 75
         self.freeze()
+
+        vocab = self.tokenizer.get_vocab()
+        self.comma_token = vocab.get(',</w>', None)
+        self.id_start = self.tokenizer.bos_token_id
+        self.id_end = self.tokenizer.eos_token_id
+        self.id_pad = self.id_end
+
+    def empty_chunk(self):
+        """creates an empty PromptChunk and returns it"""
+
+        chunk = PromptChunk()
+        chunk.tokens = [self.id_start] + [self.id_end] * (self.chunk_length + 1)
+        return chunk
 
     def freeze(self):
         self.transformer = self.transformer.eval()
         for param in self.parameters():
             param.requires_grad = False
 
-    def forward(self, text, clip_skip):
-        batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
-                                        return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
-        tokens = batch_encoding["input_ids"].to(self.device)
+    def get_target_prompt_token_count(self, token_count):
+        """returns the maximum number of tokens a prompt of a known length can have before it requires one more PromptChunk to be represented"""
+
+        return math.ceil(max(token_count, 1) / self.chunk_length) * self.chunk_length
+
+    def tokenize(self, texts):
+        tokenized = self.tokenizer(texts, truncation=False, add_special_tokens=False)["input_ids"]
+
+        return tokenized
+
+    def encode_with_transformers(self, tokens, clip_skip):
         outputs = self.transformer(input_ids=tokens, output_hidden_states=True)
 
         if clip_skip > 1:
@@ -170,7 +193,123 @@ class FrozenCLIPEmbedder(AbstractEncoder):
             z = self.transformer.text_model.final_layer_norm(z)
         else:
             z = outputs.last_hidden_state
+
         return z
+
+    def encode_embedding_init_text(self, init_text, nvpt):
+        """Converts text into a tensor with this text's tokens' embeddings. Note that those are embeddings before they are passed through
+        transformers. nvpt is used as a maximum length in tokens. If text produces less teokens than nvpt, only this many is returned."""
+
+        raise NotImplementedError
+    
+    def tokenize_line(self, line):
+        """
+        this transforms a single prompt into a list of PromptChunk objects - as many as needed to
+        represent the prompt.
+        Returns the list and the total number of tokens in the prompt.
+        """
+        tokenized = self.tokenize(line)
+
+        chunks = []
+        chunk = PromptChunk()
+        token_count = 0
+        last_comma = -1
+
+        def next_chunk():
+            """puts current chunk into the list of results and produces the next one - empty"""
+            nonlocal token_count
+            nonlocal last_comma
+            nonlocal chunk
+            token_count += len(chunk.tokens)
+            to_add = self.chunk_length - len(chunk.tokens)
+            if to_add > 0:
+                chunk.tokens += [self.id_end] * to_add
+
+            chunk.tokens = [self.id_start] + chunk.tokens + [self.id_end]
+
+            last_comma = -1
+            chunks.append(chunk)
+            chunk = PromptChunk()
+
+        for tokens in zip(tokenized):
+            position = 0
+            while position < len(tokens):
+                token = tokens[position]
+
+                if token == self.comma_token:
+                    last_comma = len(chunk.tokens)
+
+                elif len(chunk.tokens) == self.chunk_length and last_comma != -1 and len(chunk.tokens) - last_comma <= 20:
+                    break_location = last_comma + 1
+
+                    reloc_tokens = chunk.tokens[break_location:]
+                    chunk.tokens = chunk.tokens[:break_location]
+
+                    next_chunk()
+                    chunk.tokens = reloc_tokens
+
+                if len(chunk.tokens) == self.chunk_length:
+                    next_chunk()
+
+                chunk.tokens.append(token)
+                position += 1
+
+        if len(chunk.tokens) > 0 or len(chunks) == 0:
+            next_chunk()
+
+        return chunks, token_count
+
+    def process_texts(self, text):
+        token_count = 0
+        batch_chunks = []
+        chunks, current_token_count = self.tokenize_line(text)
+        token_count = max(current_token_count, token_count)
+
+        batch_chunks.append(chunks)
+        return batch_chunks, token_count
+    
+    def process_tokens(self, remade_batch_tokens, clip_skip):
+        """
+        sends one single prompt chunk to be encoded by transformers neural network.
+        remade_batch_tokens is a batch of tokens - a list, where every element is a list of tokens; usually
+        there are exactly 77 tokens in the list.
+        """
+        tokens = torch.asarray(remade_batch_tokens).to(self.device)
+
+        # this is for SD2: SD1 uses the same token for padding and end of text, while SD2 uses different ones.
+        if self.id_end != self.id_pad:
+            for batch_pos in range(len(remade_batch_tokens)):
+                index = remade_batch_tokens[batch_pos].index(self.id_end)
+                tokens[batch_pos, index+1:tokens.shape[1]] = self.id_pad
+
+        z = self.encode_with_transformers(tokens, clip_skip)
+
+        return z
+
+    def forward(self, text, clip_skip):
+        if len(text) < 50:
+            batch_encoding = self.tokenizer(text, truncation=True, max_length=self.max_length, return_length=True,
+                                            return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
+            tokens = batch_encoding["input_ids"].to(self.device)
+            z = self.encode_with_transformers(tokens, clip_skip)
+
+            return z
+        
+        else:
+            batch_chunks, token_count = self.process_texts(text)
+            logger.debug(f"Token count for prompt = {token_count}")
+            chunk_count = max([len(x) for x in batch_chunks])
+
+            zs = []
+            for i in range(chunk_count):
+                batch_chunk = [chunks[i] if i < len(chunks) else self.empty_chunk() for chunks in batch_chunks]
+
+                tokens = [x.tokens for x in batch_chunk]
+
+                z = self.process_tokens(tokens, clip_skip)
+                zs.append(z)
+
+            return torch.hstack(zs)
 
     def encode(self, text, clip_skip):
         return self(text, clip_skip)
@@ -240,6 +379,11 @@ class FrozenClipImageEmbedder(nn.Module):
     def forward(self, x):
         # x is assumed to be in range [-1,1]
         return self.model.encode_image(self.preprocess(x))
+    
+class PromptChunk:
+
+    def __init__(self):
+        self.tokens = []
 
 
 if __name__ == "__main__":

@@ -17,10 +17,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
 
+import torch
+
 from nataili.util.logger import logger
 
 # When using prompt weights, use this to recover the original non-weighted prompt
 prompt_filter_regex = r"[\(\)]|:\d+(\.\d+)?"
+
+
+def fix_mismatched_tensors(conditioning, unconditional_conditioning, model):
+    if conditioning.shape[1] < unconditional_conditioning.shape[1]:
+        unconditional_conditioning = unconditional_conditioning.to(conditioning.get_device())
+        dim_to_add: int = unconditional_conditioning.shape[1] - conditioning.shape[1]
+        paddings = torch.zeros(conditioning.shape[0], dim_to_add, conditioning.shape[2]).to(model.device)
+        conditioning = torch.cat((conditioning, paddings), dim=1)
+        logger.debug(f"Updated Conditioning shape = {conditioning.shape}")
+
+    elif conditioning.shape[1] > unconditional_conditioning.shape[1]:
+        unconditional_conditioning = unconditional_conditioning.to(conditioning.get_device())
+        dim_to_add: int = conditioning.shape[1] - unconditional_conditioning.shape[1]
+        paddings = torch.zeros(
+            unconditional_conditioning.shape[0], dim_to_add, unconditional_conditioning.shape[2]
+        ).to(model.device)
+        unconditional_conditioning = torch.cat((unconditional_conditioning, paddings), dim=1)
+        logger.debug(f"Updated Unonditioning shape = {unconditional_conditioning.shape}")
+
+    return conditioning, unconditional_conditioning
 
 
 # We subtract the conditioning of the full prompt without the subprompt, from the conditioning of the full prompt
@@ -36,6 +58,10 @@ def update_conditioning(
         prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt, clip_skip)
     else:
         prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt)
+    if filtered_whole_prompt_c.shape[1] != prompt_wo_subprompt_c.shape[1]:
+        filtered_whole_prompt_c, prompt_wo_subprompt_c = fix_mismatched_tensors(
+            filtered_whole_prompt_c, prompt_wo_subprompt_c, model
+        )
     subprompt_contribution_to_c = filtered_whole_prompt_c - prompt_wo_subprompt_c
     current_prompt_c += (weight - 1.0) * subprompt_contribution_to_c
     return current_prompt_c

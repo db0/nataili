@@ -86,7 +86,7 @@ class DreamboothLoRA:
         mixed_precision: Optional[str] = "no",
         resume_unet: Optional[str] = None,
         resume_text_encoder: Optional[str] = None,
-        progress_bar= None
+        progress_bar=None,
     ):
         self.progress_bar = progress_bar
         self.accelerator = Accelerator(
@@ -291,9 +291,13 @@ class DreamboothLoRA:
         self.logger.info(f"  Total optimization steps = {max_train_steps}")
         # Only show the progress bar once on each machine.
         if self.progress_bar is not None:
-            progress_bar = self.progress_bar.tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active, desc="Steps")
+            progress_bar = self.progress_bar.tqdm(
+                range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active, desc="Steps"
+            )
         else:
-            progress_bar = tqdm(range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active)
+            progress_bar = tqdm(
+                range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active
+            )
             progress_bar.set_description("Steps")
         global_step = 0
         last_save = 0

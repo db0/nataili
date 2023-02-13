@@ -399,9 +399,9 @@ class CompVis:
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                             if clip_skip is not None:
-                                uc = model.get_learned_conditioning(len(prompts) * [negprompt], 1)
+                                uc = model.get_learned_conditioning(negprompt, 1)
                             else:
-                                uc = model.get_learned_conditioning(len(prompts) * [negprompt])
+                                uc = model.get_learned_conditioning(negprompt)
 
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
@@ -563,9 +563,9 @@ class CompVis:
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                         if clip_skip is not None:
-                            uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt], 1)
+                            uc = self.model["model"].get_learned_conditioning(negprompt, 1)
                         else:
-                            uc = self.model["model"].get_learned_conditioning(len(prompts) * [negprompt])
+                            uc = self.model["model"].get_learned_conditioning(negprompt)
 
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
