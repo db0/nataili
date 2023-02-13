@@ -1,5 +1,12 @@
 # Nataili: Multimodal AI Python Library
 
+Current version: v0.2.45
+
+[![PyPI version](https://badge.fury.io/py/nataili.svg)](https://badge.fury.io/py/nataili)
+[![Downloads](https://pepy.tech/badge/nataili)](https://pepy.tech/project/nataili)
+
+[![GitHub license](https://img.shields.io/github/license/Sygil-Dev/nataili)]
+
 Nataili is a Python library that provides tools for building multimodal AI applications. With its modular design, Nataili makes it easy to use only the tools you need to build custom AI solutions.
 
 Some of the technologies included in Nataili are:
