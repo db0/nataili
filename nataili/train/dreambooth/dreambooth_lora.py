@@ -66,7 +66,6 @@ class DreamboothLoRA:
         seed: Optional[int] = 69,
         resolution: Optional[int] = 512,
         train_text_encoder: Optional[bool] = True,
-        train_batch_size: Optional[int] = 1,
         num_train_epochs: Optional[int] = 1,
         save_steps: Optional[int] = 500,
         gradient_accumulation_steps: Optional[int] = 1,
@@ -127,8 +126,8 @@ class DreamboothLoRA:
         unet_lora_params, _ = self.LoRA.inject_trainable_lora(self.unet, r=lora_rank, loras=resume_unet)
 
         for _up, _down in self.LoRA.extract_lora_ups_down(self.unet):
-            self.logger.info("Before training: Unet First Layer lora up", _up.weight.data)
-            self.logger.info("Before training: Unet First Layer lora down", _down.weight.data)
+            print("Before training: Unet First Layer lora up", _up.weight.data)
+            print("Before training: Unet First Layer lora down", _down.weight.data)
             break
 
         self.vae.requires_grad_(False)
@@ -139,12 +138,13 @@ class DreamboothLoRA:
                 self.text_encoder,
                 target_replace_module=["CLIPAttention"],
                 r=lora_rank,
+                loras=resume_text_encoder,
             )
             for _up, _down in self.LoRA.extract_lora_ups_down(
                 self.text_encoder, target_replace_module=["CLIPAttention"]
             ):
-                self.logger.info("Before training: text encoder First Layer lora up", _up.weight.data)
-                self.logger.info("Before training: text encoder First Layer lora down", _down.weight.data)
+                print("Before training: text encoder First Layer lora up", _up.weight.data)
+                print("Before training: text encoder First Layer lora down", _down.weight.data)
                 break
 
         if gradient_checkpointing:
@@ -153,9 +153,7 @@ class DreamboothLoRA:
                 self.text_encoder.gradient_checkpointing_enable()
 
         if scale_lr:
-            learning_rate = (
-                learning_rate * gradient_accumulation_steps * train_batch_size * self.accelerator.num_processes
-            )
+            learning_rate = learning_rate * gradient_accumulation_steps * batch_size * self.accelerator.num_processes
 
         # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
         if use_8bit_adam:
@@ -279,24 +277,26 @@ class DreamboothLoRA:
         num_train_epochs = math.ceil(max_train_steps / num_update_steps_per_epoch)
 
         # Train!
-        total_batch_size = train_batch_size * self.accelerator.num_processes * gradient_accumulation_steps
+        total_batch_size = batch_size * self.accelerator.num_processes * gradient_accumulation_steps
 
         self.logger.info("***** Running training *****")
         self.logger.info(f"  Num examples = {len(train_batch)}")
         self.logger.info(f"  Num batches each epoch = {len(train_dataloader)}")
         self.logger.info(f"  Num Epochs = {num_train_epochs}")
-        self.logger.info(f"  Instantaneous batch size per device = {train_batch_size}")
+        self.logger.info(f"  Instantaneous batch size per device = {batch_size}")
         self.logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
         self.logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
         self.logger.info(f"  Total optimization steps = {max_train_steps}")
         # Only show the progress bar once on each machine.
         if self.progress_bar is not None:
             progress_bar = self.progress_bar.tqdm(
-                range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active, desc="Steps"
+                range(max_train_steps),
+                disable=not self.accelerator.is_local_main_process or disable_progress.active,
+                desc="Steps",
             )
         else:
             progress_bar = tqdm(
-                range(100), disable=not self.accelerator.is_local_main_process or disable_progress.active
+                range(max_train_steps), disable=not self.accelerator.is_local_main_process or disable_progress.active
             )
             progress_bar.set_description("Steps")
         global_step = 0
@@ -378,18 +378,10 @@ class DreamboothLoRA:
                 if self.accelerator.sync_gradients:
                     if save_steps and global_step - last_save >= save_steps:
                         if self.accelerator.is_main_process:
-                            # newer versions of accelerate allow the 'keep_fp32_wrapper' arg. without passing
-                            # it, the models will be unwrapped, and when they are then used for further training,
-                            # we will crash. pass this, but only to newer versions of accelerate. fixes
-                            # https://github.com/huggingface/diffusers/issues/1566
-                            accepts_keep_fp32_wrapper = "keep_fp32_wrapper" in set(
-                                inspect.signature(self.accelerator.unwrap_model).parameters.keys()
-                            )
-                            extra_args = {"keep_fp32_wrapper": True} if accepts_keep_fp32_wrapper else {}
                             pipeline = StableDiffusionPipeline.from_pretrained(
                                 base_checkpoint,
-                                unet=self.accelerator.unwrap_model(self.unet, **extra_args),
-                                text_encoder=self.accelerator.unwrap_model(self.text_encoder, **extra_args),
+                                unet=self.accelerator.unwrap_model(self.unet),
+                                text_encoder=self.accelerator.unwrap_model(self.text_encoder),
                             )
 
                             filename_unet = f"{output_dir}/lora_weight_e{epoch}_s{global_step}.pt"
@@ -404,11 +396,11 @@ class DreamboothLoRA:
                                 )
 
                             for _up, _down in self.LoRA.extract_lora_ups_down(pipeline.unet):
-                                self.logger.info(
+                                print(
                                     "First Unet Layer's Up Weight is now : ",
                                     _up.weight.data,
                                 )
-                                self.logger.info(
+                                print(
                                     "First Unet Layer's Down Weight is now : ",
                                     _down.weight.data,
                                 )
@@ -418,11 +410,11 @@ class DreamboothLoRA:
                                     pipeline.text_encoder,
                                     target_replace_module=["CLIPAttention"],
                                 ):
-                                    self.logger.info(
+                                    print(
                                         "First Text Encoder Layer's Up Weight is now : ",
                                         _up.weight.data,
                                     )
-                                    self.logger.info(
+                                    print(
                                         "First Text Encoder Layer's Down Weight is now : ",
                                         _down.weight.data,
                                     )

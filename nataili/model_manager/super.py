@@ -21,6 +21,12 @@ from nataili.util.logger import logger
 
 
 class ModelManager:
+    """
+    Horde-specific SuperModelManager class.
+    Note: This class is only intended for Stable Horde worker.
+    New development should use the individual model managers instead.
+    """
+
     def __init__(
         self,
         aitemplate: bool = False,
@@ -94,6 +100,12 @@ class ModelManager:
         self.init()
 
     def init(self):
+        """
+        Initialize SuperModelManager's models and available_models from
+        the models and available_models of the model types.
+        Individual model types are already initialized in their own init() functions
+        which are called when the individual model manager is created in __init__.
+        """
         model_types = [
             self.aitemplate,
             self.blip,
@@ -105,8 +117,36 @@ class ModelManager:
             self.safety_checker,
             self.codeformer,
         ]
+        # reset available models
+        self.available_models = []
         for model_type in model_types:
             if model_type is not None:
+                self.models.update(model_type.models)
+                self.available_models.extend(model_type.available_models)
+
+    def reload_database(self):
+        """
+        Horde-specific function to reload the database of available models.
+        Note: It is not appropriate to place `model_type.init()` in `init()`
+        because individual model types are already initialized after being created
+        i.e. if `model_type.init()` is placed in `self.init()`, the database will be
+        loaded twice.
+        """
+        model_types = [
+            self.aitemplate,
+            self.blip,
+            self.clip,
+            self.compvis,
+            self.diffusers,
+            self.esrgan,
+            self.gfpgan,
+            self.safety_checker,
+            self.codeformer,
+        ]
+        self.available_models = []  # reset available models
+        for model_type in model_types:
+            if model_type is not None:
+                model_type.init()
                 self.models.update(model_type.models)
                 self.available_models.extend(model_type.available_models)
 
