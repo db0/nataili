@@ -70,13 +70,14 @@ class ImageEmbed:
             preprocess_images = torch.cat(preprocess_images, dim=0)
             image_features = self.model["model"].encode_image(preprocess_images)
             for image_embed_array, pil_image in zip(image_features, pil_images):
-                future = self.executor.submit(self._save, image_embed_array, pil_image)
+                future = self.executor.submit(self._save, image_embed_array, pil_image["hash"])
                 self.cache.add_sqlite_row(
                     file=pil_image["filename"].replace(".webp", ""), pil_hash=pil_image["hash"], hash=None
                 )
 
-    def _save(self, image_embed_array, pil_image):
-        np.save(f"{self.cache.cache_dir}/{pil_image['hash']}", image_embed_array.float().cpu().detach().numpy())
+    def _save(self, image_embed_array, image_hash):
+        image_embed_array /= image_embed_array.norm(dim=-1, keepdim=True)
+        np.save(f"{self.cache.cache_dir}/{image_hash}", image_embed_array.float().cpu().detach().numpy())
 
     @autocast_cuda
     def __call__(
@@ -115,6 +116,6 @@ class ImageEmbed:
         image_features = self.model["model"].encode_image(preprocess_image).float()
         image_features /= image_features.norm(dim=-1, keepdim=True)
         image_embed_array = image_features.cpu().detach().numpy()
-        np.save(f"{self.cache.cache_dir}/{image_hash}", image_embed_array)
+        self._save(image_embed_array, image_hash)
         self.cache.add_sqlite_row(file=filename, hash=file_hash, pil_hash=image_hash)
         return image_hash

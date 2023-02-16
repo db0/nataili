@@ -78,7 +78,7 @@ class PredictorInference:
             if cached is not None:
                 return np.load(cached)
             try:
-                image_hash = self.image_embed(os.path.basename(image), os.path.dirname(image))
+                image_hash = self.image_embed(filename=os.path.basename(image), directory=os.path.dirname(image))
                 image_embed_array = np.load(f"{self.cache_image.cache_dir}/{image_hash}.npy")
                 return image_embed_array
             except Exception as e:
