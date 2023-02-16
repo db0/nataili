@@ -21,3 +21,4 @@ open-clip-torch
 pytorch-lightning
 accelerate
 ray
+webdataset
