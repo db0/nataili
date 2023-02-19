@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import re
+from contextlib import nullcontext
 
 import k_diffusion as K
 import numpy as np
@@ -376,195 +377,34 @@ class CompVis:
         if "karras" in sampler_name:
             karras = True
             sampler_name = sampler_name.replace("_karras", "")
-
-        if not self.disable_voodoo:
-            with load_from_plasma(self.model["model"], self.model["device"]) as model:
-                for m in model.modules():
-                    if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                        m.padding_mode = "circular" if tiling else m._orig_padding_mode
-                sampler = create_sampler_by_sampler_name(model)
-                if self.load_concepts and self.concepts_dir is not None:
-                    prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
-                    if prompt_tokens:
-                        process_prompt_tokens(prompt_tokens, model, self.concepts_dir)
-
-                all_prompts = batch_size * n_iter * [prompt]
-                all_seeds = [seed + x for x in range(len(all_prompts))]
-
-                if self.model_name != "pix2pix":
-                    with torch.no_grad():
-                        for n in range(n_iter):
-                            logger.debug(f"Iteration: {n+1}/{n_iter}")
-                            prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
-                            seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-                            if clip_skip is not None:
-                                uc = model.get_learned_conditioning(negprompt, 1)
-                            else:
-                                uc = model.get_learned_conditioning(negprompt)
-
-                            if isinstance(prompts, tuple):
-                                prompts = list(prompts)
-
-                            # no need to apply the fix here, it's applied internally
-                            c = torch.cat(
-                                [
-                                    get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
-                                    for prompt in prompts
-                                ]
-                            )
-
-                            opt_C = 4
-                            opt_f = 8
-                            shape = [opt_C, height // opt_f, width // opt_f]
-                            # find_noise_for_image also applies the fix internally
-                            if noise_mode in ["find", "find_and_matched"]:
-                                x = torch.cat(
-                                    batch_size
-                                    * [
-                                        find_noise_for_image(
-                                            model,
-                                            self.model["device"],
-                                            init_img.convert("RGB"),
-                                            "",
-                                            find_noise_steps,
-                                            0.0,
-                                            normalize=True,
-                                            clip_skip=clip_skip,
-                                        )
-                                    ],
-                                    dim=0,
-                                )
-                            else:
-                                x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
-                            init_data = init(model, init_img) if init_img else None
-
-                            samples_ddim = (
-                                sample_img2img(
-                                    init_data=init_data,
-                                    ddim_steps=ddim_steps,
-                                    x=x,
-                                    conditioning=c,
-                                    unconditional_conditioning=uc,
-                                    sampler_name=sampler_name,
-                                )
-                                if init_img
-                                else sample(
-                                    init_data=init_data,
-                                    x=x,
-                                    conditioning=c,
-                                    unconditional_conditioning=uc,
-                                    sampler_name=sampler_name,
-                                    karras=karras,
-                                    batch_size=batch_size,
-                                    shape=shape,
-                                    sigma_override=sigma_override,
-                                )
-                            )
-                        if hires_fix:
-                            # Put the image back together
-                            temp_x = model.decode_first_stage(samples_ddim)
-                            temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
-                            for i, x_sample in enumerate(temp_x_samples_ddim):
-                                x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
-                                x_sample = x_sample.astype(np.uint8)
-                                temp_image = Image.fromarray(x_sample)
-
-                            # Resize Image to final dimensions
-                            temp_image = ImageOps.fit(
-                                temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
-                            )
-                            shape = [opt_C, final_height // opt_f, final_width // opt_f]
-                            x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
-
-                            # Re-initialise the image
-                            init_data_temp = init(model, temp_image)
-
-                            # Send image for img2img processing
-                            logger.debug("Hi-Res Fix Pass")
-                            samples_ddim = sample_img2img(
-                                init_data=init_data_temp,
-                                ddim_steps=ddim_steps,
-                                x=x,
-                                conditioning=c,
-                                unconditional_conditioning=uc,
-                                sampler_name=sampler_name,
-                            )
-                else:
-                    init_image = init_img
-                    init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert(
-                        "RGB"
-                    )
-                    null_token = model.get_learned_conditioning([""], 1)
-                    with torch.no_grad():
-                        for n in range(n_iter):
-                            logger.debug(f"Iteration: {n+1}/{n_iter}")
-                            prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
-                            seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-
-                            cond = {}
-                            if clip_skip is not None:
-                                cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
-                            else:
-                                cond["c_crossattn"] = [model.get_learned_conditioning(prompts)]
-                            init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
-                            init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
-                            cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
-
-                            uncond = {}
-                            uncond["c_crossattn"] = [null_token]
-                            uncond["c_concat"] = [torch.zeros_like(cond["c_concat"][0])]
-
-                            init_data = init(model, init_img) if init_img else None
-                            x0, z_mask = init_data
-
-                            extra_args = {
-                                "cond": cond,
-                                "uncond": uncond,
-                                "text_cfg_scale": cfg_scale,
-                                "image_cfg_scale": denoising_strength * 2,
-                                "mask": z_mask,
-                                "x0": x0,
-                            }
-
-                            torch.manual_seed(seed)
-                            z = torch.randn_like(cond["c_concat"][0])
-                            samples_ddim, _ = sampler.sample(
-                                S=ddim_steps,
-                                conditioning=extra_args["cond"],
-                                unconditional_guidance_scale=extra_args["text_cfg_scale"],
-                                unconditional_conditioning=extra_args["uncond"],
-                                x_T=z,
-                                karras=karras,
-                                sigma_override=sigma_override,
-                                extra_args=extra_args,
-                            )
-
-                x_samples_ddim = model.decode_first_stage(samples_ddim)
-                x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-
-        else:
-            for m in self.model["model"].modules():
+        model_context = (
+            load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
+        )
+        with model_context as model:
+            if self.disable_voodoo:
+                model = self.model["model"]
+            for m in model.modules():
                 if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                     m.padding_mode = "circular" if tiling else m._orig_padding_mode
-            sampler = create_sampler_by_sampler_name(self.model["model"])
+            sampler = create_sampler_by_sampler_name(model)
             if self.load_concepts and self.concepts_dir is not None:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
                 if prompt_tokens:
-                    process_prompt_tokens(prompt_tokens, self.model["model"], self.concepts_dir)
+                    process_prompt_tokens(prompt_tokens, model, self.concepts_dir)
 
             all_prompts = batch_size * n_iter * [prompt]
             all_seeds = [seed + x for x in range(len(all_prompts))]
+
             if self.model_name != "pix2pix":
                 with torch.no_grad():
                     for n in range(n_iter):
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-
                         if clip_skip is not None:
-                            uc = self.model["model"].get_learned_conditioning(negprompt, 1)
+                            uc = model.get_learned_conditioning(negprompt, 1)
                         else:
-                            uc = self.model["model"].get_learned_conditioning(negprompt)
+                            uc = model.get_learned_conditioning(negprompt)
 
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
@@ -572,7 +412,7 @@ class CompVis:
                         # no need to apply the fix here, it's applied internally
                         c = torch.cat(
                             [
-                                get_learned_conditioning_with_prompt_weights(prompt, self.model["model"], clip_skip)
+                                get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
                                 for prompt in prompts
                             ]
                         )
@@ -586,7 +426,7 @@ class CompVis:
                                 batch_size
                                 * [
                                     find_noise_for_image(
-                                        self.model["model"],
+                                        model,
                                         self.model["device"],
                                         init_img.convert("RGB"),
                                         "",
@@ -600,8 +440,8 @@ class CompVis:
                             )
                         else:
                             x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+                        init_data = init(model, init_img) if init_img else None
 
-                        init_data = init(self.model["model"], init_img) if init_img else None
                         samples_ddim = (
                             sample_img2img(
                                 init_data=init_data,
@@ -626,7 +466,7 @@ class CompVis:
                         )
                     if hires_fix:
                         # Put the image back together
-                        temp_x = self.model["model"].decode_first_stage(samples_ddim)
+                        temp_x = model.decode_first_stage(samples_ddim)
                         temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
                         for i, x_sample in enumerate(temp_x_samples_ddim):
                             x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
@@ -637,16 +477,14 @@ class CompVis:
                         temp_image = ImageOps.fit(
                             temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
                         )
-
-                        # Create some more noise
                         shape = [opt_C, final_height // opt_f, final_width // opt_f]
                         x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
 
                         # Re-initialise the image
-                        init_data_temp = init(self.model["model"], temp_image)
+                        init_data_temp = init(model, temp_image)
 
                         # Send image for img2img processing
-                        print("Hi-Res Fix Pass")
+                        logger.debug("Hi-Res Fix Pass")
                         samples_ddim = sample_img2img(
                             init_data=init_data_temp,
                             ddim_steps=ddim_steps,
@@ -658,7 +496,7 @@ class CompVis:
             else:
                 init_image = init_img
                 init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert("RGB")
-                null_token = self.model["model"].get_learned_conditioning([""], 1)
+                null_token = model.get_learned_conditioning([""], 1)
                 with torch.no_grad():
                     for n in range(n_iter):
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
@@ -667,18 +505,18 @@ class CompVis:
 
                         cond = {}
                         if clip_skip is not None:
-                            cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts, clip_skip)]
+                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
                         else:
-                            cond["c_crossattn"] = [self.model["model"].get_learned_conditioning(prompts)]
+                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts)]
                         init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                         init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
-                        cond["c_concat"] = [self.model["model"].encode_first_stage(init_image).mode()]
+                        cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
 
                         uncond = {}
                         uncond["c_crossattn"] = [null_token]
                         uncond["c_concat"] = [torch.zeros_like(cond["c_concat"][0])]
 
-                        init_data = init(self.model["model"], init_img) if init_img else None
+                        init_data = init(model, init_img) if init_img else None
                         x0, z_mask = init_data
 
                         extra_args = {
@@ -703,7 +541,7 @@ class CompVis:
                             extra_args=extra_args,
                         )
 
-            x_samples_ddim = self.model["model"].decode_first_stage(samples_ddim)
+            x_samples_ddim = model.decode_first_stage(samples_ddim)
             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
         for i, x_sample in enumerate(x_samples_ddim):
