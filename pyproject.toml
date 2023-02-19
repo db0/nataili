@@ -19,7 +19,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nataili"
-version = "0.2.47"
+version = "0.2.48"
 authors = [
     { name="hlky", email="goto@github.com" },
 ]

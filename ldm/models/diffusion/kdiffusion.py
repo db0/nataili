@@ -4,15 +4,16 @@ import torch
 import torch.nn as nn
 import warnings
 from nataili import disable_progress
+from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 from nataili.util.cast import autocast_cuda
 
 warnings.filterwarnings("ignore")
 
 
 class KDiffusionSampler:
-    def __init__(self, m, sampler, callback=None):
+    def __init__(self, m, sampler, v:bool = False, callback=None):
         self.model = m
-        self.model_wrap = K.external.CompVisDenoiser(m)
+        self.model_wrap = K.external.CompVisDenoiser(m) if v else K.external.CompVisVDenoiser(m)
         self.schedule = sampler
         self.generation_callback = callback
 
@@ -65,13 +66,14 @@ class KDiffusionSampler:
         if z_mask is not None and obliterate:
             random = torch.randn(z_mask.shape, device=xi.device)
             xi = (z_mask * x) + ((1 - z_mask) * xi)  # NOTE: random is not used here. Check if this is correct.
-
         if extra_args is None:
             model_wrap_cfg = CFGMaskedDenoiser(self.model_wrap)
         else:
             model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
 
         if extra_args is None:
+            if conditioning.shape[1] != unconditional_conditioning.shape[1]:
+                conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
             extra_args = {
                 "cond": conditioning,
                 "uncond": unconditional_conditioning,
@@ -154,12 +156,15 @@ class KDiffusionSampler:
         else:
             sigmas = self.model_wrap.get_sigmas(S)
         x = x_T * sigmas[0]
+        
         if extra_args is None:
             model_wrap_cfg = CFGDenoiser(self.model_wrap)
         else:
             model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
 
         if extra_args is None:
+            if conditioning.shape[1] != unconditional_conditioning.shape[1]:
+                conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
             extra_args = {
                 "cond": conditioning,
                 "uncond": unconditional_conditioning,
