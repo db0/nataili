@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore")
 class KDiffusionSampler:
     def __init__(self, m, sampler, v:bool = False, callback=None):
         self.model = m
-        self.model_wrap = K.external.CompVisDenoiser(m) if v else K.external.CompVisVDenoiser(m)
+        self.model_wrap = K.external.CompVisVDenoiser(m) if v else K.external.CompVisDenoiser(m)
         self.schedule = sampler
         self.generation_callback = callback
 
