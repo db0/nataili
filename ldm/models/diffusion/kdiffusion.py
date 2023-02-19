@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 
 
 class KDiffusionSampler:
-    def __init__(self, m, sampler, v:bool = False, callback=None):
+    def __init__(self, m, sampler, v: bool = False, callback=None):
         self.model = m
         self.model_wrap = K.external.CompVisVDenoiser(m) if v else K.external.CompVisDenoiser(m)
         self.schedule = sampler
@@ -19,6 +19,7 @@ class KDiffusionSampler:
 
     def get_sampler_name(self):
         return self.schedule
+
     @autocast_cuda
     def sample_img2img(
         self,
@@ -70,10 +71,11 @@ class KDiffusionSampler:
             model_wrap_cfg = CFGMaskedDenoiser(self.model_wrap)
         else:
             model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
-
         if extra_args is None:
             if conditioning.shape[1] != unconditional_conditioning.shape[1]:
-                conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
+                conditioning, unconditional_conditioning = fix_mismatched_tensors(
+                    conditioning, unconditional_conditioning, self.model
+                )
             extra_args = {
                 "cond": conditioning,
                 "uncond": unconditional_conditioning,
@@ -117,6 +119,7 @@ class KDiffusionSampler:
             )
         #
         return samples_ddim, None
+
     @autocast_cuda
     def sample(
         self,
@@ -156,15 +159,16 @@ class KDiffusionSampler:
         else:
             sigmas = self.model_wrap.get_sigmas(S)
         x = x_T * sigmas[0]
-        
+
         if extra_args is None:
             model_wrap_cfg = CFGDenoiser(self.model_wrap)
         else:
             model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
-
         if extra_args is None:
             if conditioning.shape[1] != unconditional_conditioning.shape[1]:
-                conditioning, unconditional_conditioning = fix_mismatched_tensors(conditioning, unconditional_conditioning, self.model)
+                conditioning, unconditional_conditioning = fix_mismatched_tensors(
+                    conditioning, unconditional_conditioning, self.model
+                )
             extra_args = {
                 "cond": conditioning,
                 "uncond": unconditional_conditioning,

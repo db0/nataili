@@ -271,12 +271,8 @@ def find_noise_for_image(
     # Get full prompt embedding vector
     # workaround for sd2.x
     # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
-    if clip_skip is not None:
-        uncond = model.get_learned_conditioning([""], 1)
-        cond = model.get_learned_conditioning([prompt], clip_skip)
-    else:
-        uncond = model.get_learned_conditioning([""])
-        cond = model.get_learned_conditioning([prompt])
+    uncond = model.get_learned_conditioning([""], 1)
+    cond = model.get_learned_conditioning([prompt], clip_skip)
 
     s_in = x.new_ones([x.shape[0]])
     dnw = K.external.CompVisDenoiser(model)

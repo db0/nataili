@@ -56,10 +56,7 @@ def update_conditioning(
     prompt_wo_subprompt = filtered_whole_prompt.replace(subprompt, "")
     # workaround for sd2.x
     # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
-    if clip_skip is not None:
-        prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt, clip_skip)
-    else:
-        prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt)
+    prompt_wo_subprompt_c = model.get_learned_conditioning(prompt_wo_subprompt, clip_skip)
     if filtered_whole_prompt_c.shape[1] != prompt_wo_subprompt_c.shape[1]:
         filtered_whole_prompt_c, prompt_wo_subprompt_c = fix_mismatched_tensors(
             filtered_whole_prompt_c, prompt_wo_subprompt_c, model
@@ -77,10 +74,7 @@ def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None):
     # Get full prompt embedding vector
     # workaround for sd2.x
     # clip_skip will be set to None if the model is sd2.x then we use the original get_learned_conditioning
-    if clip_skip is not None:
-        filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt, clip_skip)
-    else:
-        filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt)
+    filtered_whole_prompt_c = model.get_learned_conditioning(filtered_whole_prompt, clip_skip)
     current_prompt_c = filtered_whole_prompt_c
 
     # Find the first () delimited subprompt

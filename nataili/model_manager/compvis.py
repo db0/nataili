@@ -23,7 +23,7 @@ import torch
 from omegaconf import OmegaConf
 from torch import nn
 
-from ldm2.util import instantiate_from_config
+from ldm.util import instantiate_from_config
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger

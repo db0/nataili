@@ -1,3 +1,4 @@
+import math
 import os
 import torch
 import torch.nn as nn
@@ -295,7 +296,7 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
         for param in self.parameters():
             param.requires_grad = False
 
-    def forward(self, text):
+    def forward(self, text, clip_skip=None):
         tokens = open_clip.tokenize(text)
         z = self.encode_with_transformer(tokens.to(self.device))
         return z
@@ -319,7 +320,7 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
                 x = r(x, attn_mask=attn_mask)
         return x
 
-    def encode(self, text):
+    def encode(self, text, clip_skip=None):
         return self(text)
 
 

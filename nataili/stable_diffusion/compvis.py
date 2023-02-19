@@ -118,22 +118,18 @@ class CompVis:
         clip_skip=1,
         hires_fix: bool = False,
     ):
-        if self.model_baseline == "stable diffusion 2":
-            clip_skip = None
         if init_img is not None:
             init_img = resize_image(resize_mode, init_img, width, height)
             hires_fix = False
         else:
-            if self.model_baseline != "stable diffusion 2" and hires_fix and width > 512 and height > 512:
+            if hires_fix and width > 512 and height > 512:
                 logger.debug("HiRes Fix Requested")
                 final_width = width
                 final_height = height
-                # Commented out until sd2 img2img is available
-                # if self.model_baseline == "stable diffusion 2":
-                #    first_pass_ratio = min(final_height / 768, final_width / 768)
-                # else:
-                #    first_pass_ratio = min(final_height / 512, final_width / 512)
-                first_pass_ratio = min(final_height / 512, final_width / 512)
+                if self.model_baseline == "stable diffusion 2":
+                    first_pass_ratio = min(final_height / 768, final_width / 768)
+                else:
+                    first_pass_ratio = min(final_height / 512, final_width / 512)
                 width = (int(final_width / first_pass_ratio) // 64) * 64
                 height = (int(final_height / first_pass_ratio) // 64) * 64
                 logger.debug(f"First pass image will be processed at width={width}; height={height}")
@@ -325,34 +321,42 @@ class CompVis:
         def create_sampler_by_sampler_name(model):
             nonlocal sampler_name
             if self.model_baseline == "stable diffusion 2":
-                sampler_name = "dpmsolver"
-            if sampler_name == "PLMS":
+                v = True
+                # model_baseline = "stable diffusion 2" covers sd2.x 768 models
+            else:
+                # 1.x models and 2.x 512 models do not use v-prediction
+                v = False
+            if (
+                sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
+            ):  # TODO: check support for sd2.x
                 sampler = PLMSSampler(model)
-            elif sampler_name == "DDIM":
+            elif (
+                sampler_name == "DDIM" and "stable diffusion 2" not in self.model_baseline
+            ):  # TODO: check support for sd2.x
                 sampler = DDIMSampler(model)
             elif sampler_name == "k_dpm_2_a":
-                sampler = KDiffusionSampler(model, "dpm_2_ancestral")
+                sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
             elif sampler_name == "k_dpm_2":
-                sampler = KDiffusionSampler(model, "dpm_2")
+                sampler = KDiffusionSampler(model, "dpm_2", v=v)
             elif sampler_name == "k_euler_a":
-                sampler = KDiffusionSampler(model, "euler_ancestral")
+                sampler = KDiffusionSampler(model, "euler_ancestral", v=v)
             elif sampler_name == "k_euler":
-                sampler = KDiffusionSampler(model, "euler")
+                sampler = KDiffusionSampler(model, "euler", v=v)
             elif sampler_name == "k_heun":
-                sampler = KDiffusionSampler(model, "heun")
+                sampler = KDiffusionSampler(model, "heun", v=v)
             elif sampler_name == "k_lms":
-                sampler = KDiffusionSampler(model, "lms")
+                sampler = KDiffusionSampler(model, "lms", v=v)
             elif sampler_name == "k_dpm_fast":
-                sampler = KDiffusionSampler(model, "dpm_fast")
+                sampler = KDiffusionSampler(model, "dpm_fast", v=v)
             elif sampler_name == "k_dpm_adaptive":
-                sampler = KDiffusionSampler(model, "dpm_adaptive")
+                sampler = KDiffusionSampler(model, "dpm_adaptive", v=v)
             elif sampler_name == "k_dpmpp_2s_a":
-                sampler = KDiffusionSampler(model, "dpmpp_2s_ancestral")
+                sampler = KDiffusionSampler(model, "dpmpp_2s_ancestral", v=v)
             elif sampler_name == "k_dpmpp_2m":
-                sampler = KDiffusionSampler(model, "dpmpp_2m")
+                sampler = KDiffusionSampler(model, "dpmpp_2m", v=v)
             elif sampler_name == "k_dpmpp_sde":
-                sampler = KDiffusionSampler(model, "dpmpp_sde")
-            elif sampler_name == "dpmsolver":
+                sampler = KDiffusionSampler(model, "dpmpp_sde", v=v)
+            elif sampler_name == "dpmsolver" and "stable diffusion 2" in self.model_baseline:  # only for sd2.x
                 sampler = DPMSolverSampler(model)
             else:
                 logger.info("Unknown sampler: " + sampler_name)
@@ -401,10 +405,7 @@ class CompVis:
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-                        if clip_skip is not None:
-                            uc = model.get_learned_conditioning(negprompt, 1)
-                        else:
-                            uc = model.get_learned_conditioning(negprompt)
+                        uc = model.get_learned_conditioning(negprompt, 1)
 
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
@@ -504,10 +505,7 @@ class CompVis:
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                         cond = {}
-                        if clip_skip is not None:
-                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
-                        else:
-                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts)]
+                        cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
                         init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                         init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                         cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
