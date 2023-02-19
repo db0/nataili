@@ -1,1 +1,1 @@
-python style.py --fix
+python style.py $*
