@@ -261,7 +261,6 @@ class CompVis:
                     x_T=x,
                 )
             else:
-
                 x0, z_mask = init_data
 
                 sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
