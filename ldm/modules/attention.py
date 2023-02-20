@@ -2,12 +2,13 @@ import importlib
 import math
 import sys
 from inspect import isfunction
-import math
+from typing import Any, Optional
+
+import psutil
 import torch
 import torch.nn.functional as F
-from torch import nn, einsum
 from einops import rearrange, repeat
-from typing import Optional, Any
+from torch import einsum, nn
 
 from ldm.modules.diffusionmodules.util import checkpoint
 from nataili import disable_xformers
@@ -34,22 +35,17 @@ elif (7, 0) <= torch.cuda.get_device_capability(device) <= (9, 0):
 
     except importlib_metadata.PackageNotFoundError:
         xformers_available = False
-        XFORMERS_IS_AVAILBLE = False
     if xformers_available:
         import xformers
         import xformers.ops
         logger.init_ok("xformers optimizations", status="Loaded")
-        XFORMERS_IS_AVAILBLE = True
     else:
         xformers = None
         logger.init_err("xformers optimizations", status="Missing")
-        XFORMERS_IS_AVAILBLE = False
 else:
     xformers = None
     logger.init_err("xformers optimizations", status="Not Possible")
-    XFORMERS_IS_AVAILBLE = False
-import os
-_ATTN_PRECISION = os.environ.get("ATTN_PRECISION", "fp32")
+
 
 def exists(val):
     return val is not None
@@ -191,59 +187,6 @@ class SpatialSelfAttention(nn.Module):
 
         return x+h_
 
-
-class CrossAttention(nn.Module):
-    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.):
-        super().__init__()
-        inner_dim = dim_head * heads
-        context_dim = default(context_dim, query_dim)
-
-        self.scale = dim_head ** -0.5
-        self.heads = heads
-
-        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
-        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
-        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
-
-        self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, query_dim),
-            nn.Dropout(dropout)
-        )
-
-    def forward(self, x, context=None, mask=None):
-        h = self.heads
-
-        q = self.to_q(x)
-        context = default(context, x)
-        k = self.to_k(context)
-        v = self.to_v(context)
-
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
-
-        # force cast to fp32 to avoid overflowing
-        if _ATTN_PRECISION =="fp32":
-            with torch.autocast(enabled=False, device_type = 'cuda'):
-                q, k = q.float(), k.float()
-                sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
-        else:
-            sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
-        
-        del q, k
-    
-        if exists(mask):
-            mask = rearrange(mask, 'b ... -> b (...)')
-            max_neg_value = -torch.finfo(sim.dtype).max
-            mask = repeat(mask, 'b j -> (b h) () j', h=h)
-            sim.masked_fill_(~mask, max_neg_value)
-
-        # attention, what we cannot get enough of
-        sim = sim.softmax(dim=-1)
-
-        out = einsum('b i j, b j d -> b i d', sim, v)
-        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
-        return self.to_out(out)
-
-
 class MemoryEfficientCrossAttention(nn.Module):
     # https://github.com/MatthieuTPHR/diffusers/blob/d80b531ff8060ec1ea982b65a1b8df70f73aa67c/src/diffusers/models/attention.py#L223
     def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.0):
@@ -292,6 +235,117 @@ class MemoryEfficientCrossAttention(nn.Module):
         )
         return self.to_out(out)
 
+class CrossAttention(nn.Module):
+    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.):
+        super().__init__()
+        inner_dim = dim_head * heads
+        context_dim = default(context_dim, query_dim)
+
+        self.scale = dim_head ** -0.5
+        self.heads = heads
+
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, query_dim),
+            nn.Dropout(dropout)
+        )
+
+        if torch.cuda.is_available():
+            self.einsum_op = self.einsum_op_cuda
+        else:
+            self.mem_total = psutil.virtual_memory().total / (1024**3)
+            self.einsum_op = self.einsum_op_mps_v1 if self.mem_total >= 32 else self.einsum_op_mps_v2
+    
+    def einsum_op_compvis(self, q, k, v, r1):
+        s1 = einsum('b i d, b j d -> b i j', q, k) * self.scale # faster
+        s2 = s1.softmax(dim=-1, dtype=q.dtype)
+        del s1
+        r1 = einsum('b i j, b j d -> b i d', s2, v)
+        del s2
+        return r1
+
+    def einsum_op_mps_v1(self, q, k, v, r1):
+        if q.shape[1] <= 4096: # (512x512) max q.shape[1]: 4096
+            r1 = self.einsum_op_compvis(q, k, v, r1)
+        else:
+            slice_size = math.floor(2**30 / (q.shape[0] * q.shape[1]))
+            for i in range(0, q.shape[1], slice_size):
+                end = i + slice_size
+                s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k) * self.scale
+                s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+                del s1  
+                r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+                del s2
+        return r1
+
+    def einsum_op_mps_v2(self, q, k, v, r1):
+        if self.mem_total >= 8 and q.shape[1] <= 4096:
+                r1 = self.einsum_op_compvis(q, k, v, r1)
+        else:
+            slice_size = 1
+            for i in range(0, q.shape[0], slice_size):
+                end = min(q.shape[0], i + slice_size)
+                s1 = einsum('b i d, b j d -> b i j', q[i:end], k[i:end])
+                s1 *= self.scale
+                s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+                del s1
+                r1[i:end] = einsum('b i j, b j d -> b i d', s2, v[i:end])
+                del s2
+        return r1
+
+    def einsum_op_cuda(self, q, k, v, r1):
+        stats = torch.cuda.memory_stats(q.device)
+        mem_active = stats['active_bytes.all.current']
+        mem_reserved = stats['reserved_bytes.all.current']
+        mem_free_cuda, _ = torch.cuda.mem_get_info(torch.cuda.current_device())
+        mem_free_torch = mem_reserved - mem_active
+        mem_free_total = mem_free_cuda + mem_free_torch
+
+        gb = 1024 ** 3
+        tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
+        mem_required = tensor_size * 2.5
+        steps = 1
+
+        if mem_required > mem_free_total:
+            steps = 2**(math.ceil(math.log(mem_required / mem_free_total, 2)))
+
+        if steps > 64:
+            max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
+            raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
+                            f'Need: {mem_required/64/gb:0.1f}GB free, Have:{mem_free_total/gb:0.1f}GB free')
+
+        slice_size = q.shape[1] // steps if (q.shape[1] % steps) == 0 else q.shape[1]  
+        for i in range(0, q.shape[1], slice_size):
+            end = min(q.shape[1], i + slice_size)
+            s1 = einsum('b i d, b j d -> b i j', q[:, i:end], k)# * self.scale
+            s2 = s1.softmax(dim=-1, dtype=r1.dtype)
+            del s1
+            r1[:, i:end] = einsum('b i j, b j d -> b i d', s2, v)
+            del s2 
+        return r1
+
+    def forward(self, x, context=None, mask=None):
+        h = self.heads
+
+        q = self.to_q(x)
+        context = default(context, x)
+        del x
+        k = self.to_k(context) * self.scale
+        v = self.to_v(context)
+        del context
+
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+
+        r1 = torch.zeros(q.shape[0], q.shape[1], v.shape[2], device=q.device, dtype=q.dtype)
+        r1 = self.einsum_op(q, k, v, r1)
+        del q, k, v
+        r2 = rearrange(r1, '(b h) n d -> b n (h d)', h=h)
+        del r1
+        return self.to_out(r2)
+
 
 class BasicTransformerBlock(nn.Module):
     ATTENTION_MODES = {
@@ -301,7 +355,7 @@ class BasicTransformerBlock(nn.Module):
     def __init__(self, dim, n_heads, d_head, dropout=0., context_dim=None, gated_ff=True, checkpoint=True,
                  disable_self_attn=False):
         super().__init__()
-        attn_mode = "softmax-xformers" if XFORMERS_IS_AVAILBLE else "softmax"
+        attn_mode = "softmax-xformers" if xformers_available else "softmax"
         assert attn_mode in self.ATTENTION_MODES
         attn_cls = self.ATTENTION_MODES[attn_mode]
         self.disable_self_attn = disable_self_attn
@@ -388,3 +442,30 @@ class SpatialTransformer(nn.Module):
         if not self.use_linear:
             x = self.proj_out(x)
         return x + x_in
+
+
+class MemoryEfficientCrossAttention(nn.Module):
+    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.0):
+        super().__init__()
+        inner_dim = dim_head * heads
+        context_dim = default(context_dim, query_dim)
+
+        self.heads = heads
+        self.dim_head = dim_head
+
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
+
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
+        self.attention_op: Optional[Any] = None
+
+    def forward(self, x, context=None):
+        q = self.to_q(x)
+        context = default(context, x)
+        k, v = self.to_k(context), self.to_v(context)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b n h d', h=self.heads).contiguous(), (q, k, v))
+        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
+        out = rearrange(out, 'b n h d -> b n (h d)', h=self.heads)
+
+        return self.to_out(out)

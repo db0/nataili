@@ -18,7 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
 from contextlib import nullcontext
+from typing import Literal
 
+import einops
 import k_diffusion as K
 import numpy as np
 import skimage
@@ -29,6 +31,10 @@ from slugify import slugify
 from torch import nn
 from transformers import CLIPFeatureExtractor
 
+from annotator.canny import CannyDetector
+from annotator.util import HWC3
+from annotator.util import resize_image as control_resize_image
+from cldm.cldm import ControlLDM
 from ldm2.models.diffusion.dpm_solver import DPMSolverSampler
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
@@ -90,6 +96,7 @@ class CompVis:
         self.safety_checker = safety_checker
         self.feature_extractor = CLIPFeatureExtractor()
         self.disable_voodoo = disable_voodoo
+        self.apply_control = None
 
     @autocast_cuda
     def generate(
@@ -117,8 +124,25 @@ class CompVis:
         tiling: bool = False,
         clip_skip=1,
         hires_fix: bool = False,
+        control_type: Literal["canny"] = None,
     ):
-        if init_img is not None:
+        if control_type is not None:
+            if not isinstance(self.model["model"], ControlLDM):
+                raise ValueError("ControlLDM model required for control")
+            if control_type == "canny":
+                self.apply_control = CannyDetector()
+            else:
+                raise ValueError(f"Invalid control_type: {control_type}")
+            sampler_name = "DDIM"
+            numpy_img = np.asarray(init_img)
+            control_img = control_resize_image(HWC3(numpy_img), 512)
+            H, W, C = control_img.shape
+            detected_map = self.apply_control(control_img, 100, 200)
+            detected_map = HWC3(detected_map)
+            control = torch.from_numpy(detected_map.copy()).float().cuda() / 255.0
+            control = torch.stack([control for _ in range(n_iter)], dim=0)
+            control = einops.rearrange(control, "b h w c -> b c h w").clone()
+        elif init_img is not None:
             init_img = resize_image(resize_mode, init_img, width, height)
             hires_fix = False
         else:
@@ -387,9 +411,10 @@ class CompVis:
         with model_context as model:
             if self.disable_voodoo:
                 model = self.model["model"]
-            for m in model.modules():
-                if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                    m.padding_mode = "circular" if tiling else m._orig_padding_mode
+            if control_type is None:
+                for m in model.modules():
+                    if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+                        m.padding_mode = "circular" if tiling else m._orig_padding_mode
             sampler = create_sampler_by_sampler_name(model)
             if self.load_concepts and self.concepts_dir is not None:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
@@ -399,7 +424,7 @@ class CompVis:
             all_prompts = batch_size * n_iter * [prompt]
             all_seeds = [seed + x for x in range(len(all_prompts))]
 
-            if self.model_name != "pix2pix":
+            if self.model_name != "pix2pix" and control_type is None:
                 with torch.no_grad():
                     for n in range(n_iter):
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
@@ -494,6 +519,33 @@ class CompVis:
                             unconditional_conditioning=uc,
                             sampler_name=sampler_name,
                         )
+            elif control_type is not None:
+                with torch.no_grad():
+                    for n in range(n_iter):
+                        prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
+                        seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
+                        logger.debug(f"Iteration: {n+1}/{n_iter}")
+                        cond = {
+                            "c_concat": [control],
+                            "c_crossattn": [model.get_learned_conditioning([prompt] * n_iter, 1)],
+                        }
+                        un_cond = {
+                            "c_concat": [control],
+                            "c_crossattn": [model.get_learned_conditioning([negprompt] * n_iter, 1)],
+                        }
+                        shape = (4, H // 8, W // 8)
+                        logger.info(f"shape = {shape}")
+                        model.control_scales = [1.0] * 13
+                        samples_ddim, _ = sampler.sample(
+                            ddim_steps,
+                            n_iter,
+                            shape,
+                            cond,
+                            verbose=False,
+                            eta=ddim_eta,
+                            unconditional_guidance_scale=cfg_scale,
+                            unconditional_conditioning=un_cond,
+                        )
             else:
                 init_image = init_img
                 init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert("RGB")
@@ -540,7 +592,16 @@ class CompVis:
                         )
 
             x_samples_ddim = model.decode_first_stage(samples_ddim)
-            x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+            if control_type is None:
+                x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+            else:
+                x_samples_ddim = (
+                    (einops.rearrange(x_samples_ddim, "b c h w -> b h w c") * 127.5 + 127.5)
+                    .cpu()
+                    .numpy()
+                    .clip(0, 255)
+                    .astype(np.uint8)
+                )
 
         for i, x_sample in enumerate(x_samples_ddim):
             sanitized_prompt = slugify(prompts[i])
@@ -552,10 +613,12 @@ class CompVis:
             filename = f"{base_count:05}-{ddim_steps}_{sampler_name}_{seeds[i]}_{sanitized_prompt}"[
                 : 200 - len(full_path)
             ]
-
-            x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
-            x_sample = x_sample.astype(np.uint8)
-            image = Image.fromarray(x_sample)
+            if control_type is None:
+                x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
+                x_sample = x_sample.astype(np.uint8)
+                image = Image.fromarray(x_sample)
+            else:
+                image = Image.fromarray(x_sample)
             if self.safety_checker is not None and self.filter_nsfw:
                 image_features = self.feature_extractor(image, return_tensors="pt").to(self.safety_checker.device)
                 output_images, has_nsfw_concept = self.safety_checker(

@@ -282,6 +282,8 @@ class BaseModelManager:
         """
         available = True
         for file in files:
+            if ".yaml" in file["path"]:
+                continue
             if not self.check_file_available(file["path"]):
                 available = False
         return available
