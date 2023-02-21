@@ -47,6 +47,7 @@ class ControlNetModelManager(BaseModelManager):
         half_precision=True,
         gpu_id=0,
         cpu_only=False,
+        _device=None,
     ):
         if not self.cuda_available:
             cpu_only = True
@@ -86,7 +87,9 @@ class ControlNetModelManager(BaseModelManager):
         logger.info(f"Loading {full_name} state dict")
         model.load_state_dict(final_state_dict, strict=True)
         logger.info(f"Loaded {full_name} state dict")
-        model.to(device)
+        model.to(device if _device is None else _device)
+        model.control_model.to(device if _device is None else _device)
+        model.cond_stage_model.to(device if _device is None else _device)
         if half_precision:
             model.half()
         self.loaded_models[full_name] = {"model": model, "device": device, "half_precision": half_precision}
@@ -103,6 +106,9 @@ class ControlNetModelManager(BaseModelManager):
             logger.init_ok(f"Downloading {model_name}", status="Downloading")
             self.download_model(model_name)
             logger.init_ok(f"{model_name} downloaded", status="Downloading")
+        if model_name in self.control_nets:
+            logger.info(f"{model_name} already loaded")
+            return True
         model_path = self.get_model_files(model_name)[0]["path"]
         model_path = f"{self.path}/{model_path}"
         logger.info(f"Loading controlnet {model_name}")

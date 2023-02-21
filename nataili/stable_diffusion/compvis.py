@@ -40,6 +40,18 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from nataili import disable_progress
+from nataili.model_manager.controlnet import ControlNetModelManager
+from nataili.stable_diffusion.annotation import (
+    HED,
+    Canny,
+    Depth,
+    FakeScribbles,
+    Hough,
+    Normal,
+    Openpose,
+    Scribble,
+    Seg,
+)
 from nataili.stable_diffusion.prompt_weights import get_learned_conditioning_with_prompt_weights
 from nataili.util.cache import torch_gc
 from nataili.util.cast import autocast_cpu, autocast_cuda
@@ -97,6 +109,8 @@ class CompVis:
         self.feature_extractor = CLIPFeatureExtractor()
         self.disable_voodoo = disable_voodoo
         self.apply_control = None
+        self.control_net_manager = ControlNetModelManager()
+        self.control_net_model = None
 
     @autocast_cuda
     def generate(
@@ -124,24 +138,140 @@ class CompVis:
         tiling: bool = False,
         clip_skip=1,
         hires_fix: bool = False,
-        control_type: Literal["canny"] = None,
+        control_type: Literal[
+            "canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"
+        ] = None,
     ):
         if control_type is not None:
-            if not isinstance(self.model["model"], ControlLDM):
-                raise ValueError("ControlLDM model required for control")
+            sampler_name = "DDIM"
             if control_type == "canny":
-                self.apply_control = CannyDetector()
+                control_name = "control_canny"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                canny = Canny()
+                control_result = canny(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "hed":
+                control_name = "control_hed"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                hed = HED()
+                control_result = hed(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "depth":
+                control_name = "control_depth"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                depth = Depth()
+                control_result = depth(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "scribble":
+                control_name = "control_scribble"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                scribble = Scribble()
+                control_result = scribble(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "fakescribbles":
+                control_name = "control_scribble"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                fake_scribbles = FakeScribbles()
+                control_result = fake_scribbles(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "hough":
+                control_name = "control_mlsd"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                hough = Hough()
+                control_result = hough(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "openpose":
+                control_name = "control_openpose"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                openpose = Openpose()
+                control_result = openpose(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "seg":
+                control_name = "control_seg"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                seg = Seg()
+                control_result = seg(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
+            elif control_type == "normal":
+                control_name = "control_normal"
+                self.control_net_manager.load_controlnet(control_name)
+                self.control_net_manager.load_control_ldm(
+                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
+                )
+                loaded_control_ldm = f"{control_name}_{self.model_name}"
+                self.model_name = loaded_control_ldm
+                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                self.model["model"] = self.model["model"].cpu()
+                normal = Normal()
+                control_result = normal(init_img)
+                control = control_result["control"]
+                H, W, C = control_result["shape"]
             else:
                 raise ValueError(f"Invalid control_type: {control_type}")
-            sampler_name = "DDIM"
-            numpy_img = np.asarray(init_img)
-            control_img = control_resize_image(HWC3(numpy_img), 512)
-            H, W, C = control_img.shape
-            detected_map = self.apply_control(control_img, 100, 200)
-            detected_map = HWC3(detected_map)
-            control = torch.from_numpy(detected_map.copy()).float().cuda() / 255.0
-            control = torch.stack([control for _ in range(n_iter)], dim=0)
-            control = einops.rearrange(control, "b h w c -> b c h w").clone()
         elif init_img is not None:
             init_img = resize_image(resize_mode, init_img, width, height)
             hires_fix = False
@@ -410,7 +540,11 @@ class CompVis:
         )
         with model_context as model:
             if self.disable_voodoo:
-                model = self.model["model"]
+                model = (
+                    self.control_net_model
+                    if control_type is not None and self.control_net_model is not None
+                    else self.model["model"]
+                )
             if control_type is None:
                 for m in model.modules():
                     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -655,5 +789,10 @@ class CompVis:
         torch_gc()
 
         del sampler
+        if control_type is not None:
+            del model
+            del self.control_net_model
+            torch.cuda.empty_cache()
+            self.model["model"] = self.model["model"].to(self.model["device"])
 
         return

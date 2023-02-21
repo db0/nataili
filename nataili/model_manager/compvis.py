@@ -183,6 +183,7 @@ class CompVisModelManager(BaseModelManager):
             model = push_model_to_plasma(model) if isinstance(model, torch.nn.Module) else model
         else:
             model = model.to(device)
+            model.cond_stage_model = model.cond_stage_model.to(device)
         return {"model": model, "device": device, "half_precision": half_precision}
 
     def check_model_available(self, model_name):

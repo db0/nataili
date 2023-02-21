@@ -22,3 +22,5 @@ pytorch-lightning
 accelerate
 ray
 webdataset
+safetensors
+prettytable
