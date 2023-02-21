@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
-import os
+from nataili.cache import get_cache_directory, get_package
 
+nataili_package = get_package()
 
-annotator_ckpts_path = os.path.join(os.path.dirname(__file__), 'ckpts')
+annotator_ckpts_path = f"{get_cache_directory()}/controlnet/annotator/ckpts"
 
 
 def HWC3(x):

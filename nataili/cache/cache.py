@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import sys
 from pathlib import Path
 
 from PIL import Image
@@ -26,6 +27,16 @@ from tqdm import tqdm
 
 from nataili import disable_progress
 from nataili.util.logger import logger
+
+if sys.version_info < (3, 9):
+    import importlib_resources
+else:
+    import importlib.resources as importlib_resources
+
+
+def get_package():
+    pkg = importlib_resources.files("annotator")
+    return pkg
 
 
 def get_cache_directory():
