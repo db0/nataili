@@ -37,4 +37,5 @@ for control_type in control_types:
         prompt,
         init_img=init_image,
         control_type=control_type,
+        ddim_steps=20,
     )

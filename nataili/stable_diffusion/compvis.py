@@ -142,7 +142,7 @@ class CompVis:
             "canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"
         ] = None,
     ):
-        if control_type is not None:
+        if control_type is not None and init_img is not None and "stable diffusion 2" not in self.model_baseline:
             sampler_name = "DDIM"
             if control_type == "canny":
                 control_name = "control_canny"
