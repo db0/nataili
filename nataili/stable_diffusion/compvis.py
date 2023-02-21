@@ -52,7 +52,10 @@ from nataili.stable_diffusion.annotation import (
     Scribble,
     Seg,
 )
-from nataili.stable_diffusion.prompt_weights import get_learned_conditioning_with_prompt_weights
+from nataili.stable_diffusion.prompt_weights import (
+    fix_mismatched_tensors,
+    get_learned_conditioning_with_prompt_weights,
+)
 from nataili.util.cache import torch_gc
 from nataili.util.cast import autocast_cpu, autocast_cuda
 from nataili.util.create_random_tensors import create_random_tensors
@@ -661,12 +664,17 @@ class CompVis:
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
                         cond = {
                             "c_concat": [control],
-                            "c_crossattn": [model.get_learned_conditioning([prompt] * n_iter, 1)],
+                            "c_crossattn": [get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)],
                         }
                         un_cond = {
                             "c_concat": [control],
-                            "c_crossattn": [model.get_learned_conditioning([negprompt] * n_iter, 1)],
+                            "c_crossattn": [model.get_learned_conditioning(negprompt, 1)],
                         }
+
+                        if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
+                            cond["c_crossattn"][0], un_cond["c_crossattn"][0] = fix_mismatched_tensors(
+                                cond["c_crossattn"][0], un_cond["c_crossattn"][0], model
+                            )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
                         model.control_scales = [1.0] * 13
