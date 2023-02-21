@@ -68,7 +68,7 @@ class ControlNetModelManager(BaseModelManager):
         full_name = f"{model_name}_{target_name}"
         logger.info(f"Loaded {full_name} ControlLDM")
         sd15_with_control_state_dict = self.control_nets[model_name]["state_dict"]
-        final_state_dict = input_state_dict.copy()
+        final_state_dict: dict = input_state_dict.copy()
         keys = sd15_with_control_state_dict.keys()
         logger.info("Merge control net state dict into target state dict")
         for key in keys:
@@ -83,6 +83,9 @@ class ControlNetModelManager(BaseModelManager):
                 # logger.info(f"directly copying {key_name} from control")
                 p_new = p
             final_state_dict[key] = p_new
+        # remove key "lvlb_weights"
+        if "lvlb_weights" in final_state_dict.keys():
+            final_state_dict.pop("lvlb_weights")
         logger.info("Finished merging control net state dict into target state dict")
         logger.info(f"Loading {full_name} state dict")
         model.load_state_dict(final_state_dict, strict=True)

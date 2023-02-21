@@ -145,418 +145,419 @@ class CompVis:
             "canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"
         ] = None,
     ):
-        if control_type is not None and init_img is not None and "stable diffusion 2" not in self.model_baseline:
-            sampler_name = "DDIM"
-            if control_type == "canny":
-                control_name = "control_canny"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                canny = Canny()
-                control_result = canny(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "hed":
-                control_name = "control_hed"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                hed = HED()
-                control_result = hed(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "depth":
-                control_name = "control_depth"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                depth = Depth()
-                control_result = depth(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "scribble":
-                control_name = "control_scribble"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                scribble = Scribble()
-                control_result = scribble(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "fakescribbles":
-                control_name = "control_scribble"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                fake_scribbles = FakeScribbles()
-                control_result = fake_scribbles(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "hough":
-                control_name = "control_mlsd"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                hough = Hough()
-                control_result = hough(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "openpose":
-                control_name = "control_openpose"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                openpose = Openpose()
-                control_result = openpose(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "seg":
-                control_name = "control_seg"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                seg = Seg()
-                control_result = seg(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            elif control_type == "normal":
-                control_name = "control_normal"
-                self.control_net_manager.load_controlnet(control_name)
-                self.control_net_manager.load_control_ldm(
-                    control_name, self.model_name, self.model["model"].state_dict(), _device=self.model["device"]
-                )
-                loaded_control_ldm = f"{control_name}_{self.model_name}"
-                self.model_name = loaded_control_ldm
-                self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                self.model["model"] = self.model["model"].cpu()
-                normal = Normal()
-                control_result = normal(init_img)
-                control = control_result["control"]
-                H, W, C = control_result["shape"]
-            else:
-                raise ValueError(f"Invalid control_type: {control_type}")
-        elif init_img is not None:
-            init_img = resize_image(resize_mode, init_img, width, height)
-            hires_fix = False
-        else:
-            if hires_fix and width > 512 and height > 512:
-                logger.debug("HiRes Fix Requested")
-                final_width = width
-                final_height = height
-                if self.model_baseline == "stable diffusion 2":
-                    first_pass_ratio = min(final_height / 768, final_width / 768)
-                else:
-                    first_pass_ratio = min(final_height / 512, final_width / 512)
-                width = (int(final_width / first_pass_ratio) // 64) * 64
-                height = (int(final_height / first_pass_ratio) // 64) * 64
-                logger.debug(f"First pass image will be processed at width={width}; height={height}")
-            else:
-                hires_fix = False
-        if mask_mode == "mask":
-            if init_mask:
-                init_mask = process_init_mask(init_mask)
-        elif mask_mode == "invert":
-            if init_mask:
-                init_mask = process_init_mask(init_mask)
-                init_mask = ImageOps.invert(init_mask)
-        elif mask_mode == "alpha":
-            init_img_transparency = init_img.split()[-1].convert(
-                "L"
-            )  # .point(lambda x: 255 if x > 0 else 0, mode='1')
-            init_mask = init_img_transparency
-            init_mask = init_mask.convert("RGB")
-            init_mask = resize_image(resize_mode, init_mask, width, height)
-            init_mask = init_mask.convert("RGB")
-
-        assert 0.0 <= denoising_strength <= 1.0, "can only work with strength in [0.0, 1.0]"
-        t_enc = int(denoising_strength * ddim_steps)
-
-        if (
-            init_mask is not None
-            and (noise_mode == "matched" or noise_mode == "find_and_matched")
-            and init_img is not None
-        ):
-            noise_q = 0.99
-            color_variation = 0.0
-            mask_blend_factor = 1.0
-
-            np_init = (np.asarray(init_img.convert("RGB")) / 255.0).astype(
-                np.float64
-            )  # annoyingly complex mask fixing
-            np_mask_rgb = 1.0 - (np.asarray(ImageOps.invert(init_mask).convert("RGB")) / 255.0).astype(np.float64)
-            np_mask_rgb -= np.min(np_mask_rgb)
-            np_mask_rgb /= np.max(np_mask_rgb)
-            np_mask_rgb = 1.0 - np_mask_rgb
-            np_mask_rgb_hardened = 1.0 - (np_mask_rgb < 0.99).astype(np.float64)
-            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16.0, channel_axis=2, truncate=32.0)
-            blurred2 = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16.0, channel_axis=2, truncate=32.0)
-            # np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
-            # np_mask_rgb = np_mask_rgb + blurred
-            np_mask_rgb_dilated = np.clip((np_mask_rgb + blurred2) * 0.7071, 0.0, 1.0)
-            np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7071, 0.0, 1.0)
-
-            noise_rgb = get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
-            blend_mask_rgb = np.clip(np_mask_rgb_dilated, 0.0, 1.0) ** (mask_blend_factor)
-            noised = noise_rgb[:]
-            blend_mask_rgb **= 2.0
-            noised = np_init[:] * (1.0 - blend_mask_rgb) + noised * blend_mask_rgb
-
-            np_mask_grey = np.sum(np_mask_rgb, axis=2) / 3.0
-            ref_mask = np_mask_grey < 1e-3
-
-            all_mask = np.ones((height, width), dtype=bool)
-            noised[all_mask, :] = skimage.exposure.match_histograms(
-                noised[all_mask, :] ** 1.0, noised[ref_mask, :], channel_axis=1
-            )
-
-            init_img = Image.fromarray(np.clip(noised * 255.0, 0.0, 255.0).astype(np.uint8), mode="RGB")
-
-        def init(model, init_img):
-            image = init_img.convert("RGB")
-            image = np.array(image).astype(np.float32) / 255.0
-            image = image[None].transpose(0, 3, 1, 2)
-            image = torch.from_numpy(image)
-
-            mask_channel = None
-            if init_mask:
-                alpha = resize_image(resize_mode, init_mask, width // 8, height // 8)
-                mask_channel = alpha.split()[-1]
-
-            mask = None
-            if mask_channel is not None:
-                mask = np.array(mask_channel).astype(np.float32) / 255.0
-                mask = 1 - mask
-                mask = np.tile(mask, (4, 1, 1))
-                mask = mask[None].transpose(0, 1, 2, 3)
-                mask = torch.from_numpy(mask).to(model.device)
-
-            init_image = 2.0 * image - 1.0
-            init_image = init_image.to(model.device)
-            init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-
-            return (
-                init_latent,
-                mask,
-            )
-
-        def sample_img2img(
-            init_data,
-            ddim_steps,
-            x,
-            conditioning,
-            unconditional_conditioning,
-            sampler_name,
-            batch_size=1,
-            shape=None,
-            karras=False,
-            sigma_override: dict = None,
-        ):
-            nonlocal sampler
-            t_enc_steps = t_enc
-            if hires_fix:
-                ddim_steps = 20
-                t_enc_steps = int(0.2 * ddim_steps)
-            else:
-                t_enc_steps = t_enc
-            obliterate = False
-            if ddim_steps == t_enc_steps:
-                t_enc_steps = t_enc_steps - 1
-                obliterate = True
-
-            if sampler_name != "DDIM":
-                samples_ddim, _ = sampler.sample_img2img(
-                    init_data=init_data,
-                    S=ddim_steps,
-                    t_enc=t_enc_steps,
-                    obliterate=obliterate,
-                    conditioning=conditioning,
-                    unconditional_conditioning=unconditional_conditioning,
-                    unconditional_guidance_scale=cfg_scale,
-                    x_T=x,
-                )
-            else:
-                x0, z_mask = init_data
-
-                sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
-                z_enc = sampler.stochastic_encode(
-                    x0,
-                    torch.tensor([t_enc_steps] * batch_size).to(self.model["device"]),
-                )
-
-                # Obliterate masked image
-                if z_mask is not None and obliterate:
-                    random = torch.randn(z_mask.shape, device=z_enc.device)
-                    z_enc = (z_mask * random) + ((1 - z_mask) * z_enc)
-
-                    # decode it
-                samples_ddim = sampler.decode(
-                    z_enc,
-                    conditioning,
-                    t_enc_steps,
-                    unconditional_guidance_scale=cfg_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                    z_mask=z_mask,
-                    x0=x0,
-                )
-            return samples_ddim
-
-        def sample(
-            init_data,
-            x,
-            conditioning,
-            unconditional_conditioning,
-            sampler_name,
-            batch_size=1,
-            shape=None,
-            karras=False,
-            sigma_override: dict = None,
-        ):
-            if sampler_name == "dpmsolver":
-                samples_ddim, _ = sampler.sample(
-                    ddim_steps,
-                    batch_size,
-                    shape,
-                    conditioning=conditioning,
-                    unconditional_guidance_scale=cfg_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                    x_T=x,
-                    karras=karras,
-                    sigma_override=sigma_override,
-                )
-            else:
-                samples_ddim, _ = sampler.sample(
-                    S=ddim_steps,
-                    conditioning=conditioning,
-                    unconditional_guidance_scale=cfg_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                    x_T=x,
-                    karras=karras,
-                    sigma_override=sigma_override,
-                )
-            return samples_ddim
-
-        def create_sampler_by_sampler_name(model):
-            nonlocal sampler_name
-            if self.model_baseline == "stable diffusion 2":
-                v = True
-                # model_baseline = "stable diffusion 2" covers sd2.x 768 models
-            else:
-                # 1.x models and 2.x 512 models do not use v-prediction
-                v = False
-            if (
-                sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
-            ):  # TODO: check support for sd2.x
-                sampler = PLMSSampler(model)
-            elif (
-                sampler_name == "DDIM" and "stable diffusion 2" not in self.model_baseline
-            ):  # TODO: check support for sd2.x
-                sampler = DDIMSampler(model)
-            elif sampler_name == "k_dpm_2_a":
-                sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
-            elif sampler_name == "k_dpm_2":
-                sampler = KDiffusionSampler(model, "dpm_2", v=v)
-            elif sampler_name == "k_euler_a":
-                sampler = KDiffusionSampler(model, "euler_ancestral", v=v)
-            elif sampler_name == "k_euler":
-                sampler = KDiffusionSampler(model, "euler", v=v)
-            elif sampler_name == "k_heun":
-                sampler = KDiffusionSampler(model, "heun", v=v)
-            elif sampler_name == "k_lms":
-                sampler = KDiffusionSampler(model, "lms", v=v)
-            elif sampler_name == "k_dpm_fast":
-                sampler = KDiffusionSampler(model, "dpm_fast", v=v)
-            elif sampler_name == "k_dpm_adaptive":
-                sampler = KDiffusionSampler(model, "dpm_adaptive", v=v)
-            elif sampler_name == "k_dpmpp_2s_a":
-                sampler = KDiffusionSampler(model, "dpmpp_2s_ancestral", v=v)
-            elif sampler_name == "k_dpmpp_2m":
-                sampler = KDiffusionSampler(model, "dpmpp_2m", v=v)
-            elif sampler_name == "k_dpmpp_sde":
-                sampler = KDiffusionSampler(model, "dpmpp_sde", v=v)
-            elif sampler_name == "dpmsolver" and "stable diffusion 2" in self.model_baseline:  # only for sd2.x
-                sampler = DPMSolverSampler(model)
-            else:
-                logger.info("Unknown sampler: " + sampler_name)
-
-            return sampler
-
-        seed = seed_to_int(seed)
-
-        image_dict = {"seed": seed}
-        negprompt = ""
-        if "###" in prompt:
-            prompt, negprompt = prompt.split("###", 1)
-            prompt = prompt.strip()
-            negprompt = negprompt.strip()
-
-        os.makedirs(self.output_dir, exist_ok=True)
-
-        sample_path = os.path.join(self.output_dir, "samples")
-        os.makedirs(sample_path, exist_ok=True)
-
-        karras = False
-        if "karras" in sampler_name:
-            karras = True
-            sampler_name = sampler_name.replace("_karras", "")
         model_context = (
             load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
         )
         with model_context as model:
             if self.disable_voodoo:
-                model = (
-                    self.control_net_model
-                    if control_type is not None and self.control_net_model is not None
-                    else self.model["model"]
+                model = self.model["model"]
+            if control_type is not None and init_img is not None and "stable diffusion 2" not in self.model_baseline:
+                sampler_name = "DDIM"
+                if control_type == "canny":
+                    control_name = "control_canny"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    canny = Canny()
+                    control_result = canny(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "hed":
+                    control_name = "control_hed"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    hed = HED()
+                    control_result = hed(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "depth":
+                    control_name = "control_depth"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    depth = Depth()
+                    control_result = depth(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "scribble":
+                    control_name = "control_scribble"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    scribble = Scribble()
+                    control_result = scribble(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "fakescribbles":
+                    control_name = "control_scribble"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    fake_scribbles = FakeScribbles()
+                    control_result = fake_scribbles(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "hough":
+                    control_name = "control_mlsd"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    hough = Hough()
+                    control_result = hough(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "openpose":
+                    control_name = "control_openpose"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    openpose = Openpose()
+                    control_result = openpose(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "seg":
+                    control_name = "control_seg"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    seg = Seg()
+                    control_result = seg(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                elif control_type == "normal":
+                    control_name = "control_normal"
+                    self.control_net_manager.load_controlnet(control_name)
+                    self.control_net_manager.load_control_ldm(
+                        control_name, self.model_name, model.state_dict(), _device=self.model["device"]
+                    )
+                    loaded_control_ldm = f"{control_name}_{self.model_name}"
+                    self.model_name = loaded_control_ldm
+                    self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
+                    model = model.cpu()
+                    normal = Normal()
+                    control_result = normal(init_img)
+                    control = control_result["control"]
+                    H, W, C = control_result["shape"]
+                else:
+                    raise ValueError(f"Invalid control_type: {control_type}")
+            elif init_img is not None:
+                init_img = resize_image(resize_mode, init_img, width, height)
+                hires_fix = False
+            else:
+                if hires_fix and width > 512 and height > 512:
+                    logger.debug("HiRes Fix Requested")
+                    final_width = width
+                    final_height = height
+                    if self.model_baseline == "stable diffusion 2":
+                        first_pass_ratio = min(final_height / 768, final_width / 768)
+                    else:
+                        first_pass_ratio = min(final_height / 512, final_width / 512)
+                    width = (int(final_width / first_pass_ratio) // 64) * 64
+                    height = (int(final_height / first_pass_ratio) // 64) * 64
+                    logger.debug(f"First pass image will be processed at width={width}; height={height}")
+                else:
+                    hires_fix = False
+            if mask_mode == "mask":
+                if init_mask:
+                    init_mask = process_init_mask(init_mask)
+            elif mask_mode == "invert":
+                if init_mask:
+                    init_mask = process_init_mask(init_mask)
+                    init_mask = ImageOps.invert(init_mask)
+            elif mask_mode == "alpha":
+                init_img_transparency = init_img.split()[-1].convert(
+                    "L"
+                )  # .point(lambda x: 255 if x > 0 else 0, mode='1')
+                init_mask = init_img_transparency
+                init_mask = init_mask.convert("RGB")
+                init_mask = resize_image(resize_mode, init_mask, width, height)
+                init_mask = init_mask.convert("RGB")
+
+            assert 0.0 <= denoising_strength <= 1.0, "can only work with strength in [0.0, 1.0]"
+            t_enc = int(denoising_strength * ddim_steps)
+
+            if (
+                init_mask is not None
+                and (noise_mode == "matched" or noise_mode == "find_and_matched")
+                and init_img is not None
+            ):
+                noise_q = 0.99
+                color_variation = 0.0
+                mask_blend_factor = 1.0
+
+                np_init = (np.asarray(init_img.convert("RGB")) / 255.0).astype(
+                    np.float64
+                )  # annoyingly complex mask fixing
+                np_mask_rgb = 1.0 - (np.asarray(ImageOps.invert(init_mask).convert("RGB")) / 255.0).astype(np.float64)
+                np_mask_rgb -= np.min(np_mask_rgb)
+                np_mask_rgb /= np.max(np_mask_rgb)
+                np_mask_rgb = 1.0 - np_mask_rgb
+                np_mask_rgb_hardened = 1.0 - (np_mask_rgb < 0.99).astype(np.float64)
+                blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16.0, channel_axis=2, truncate=32.0)
+                blurred2 = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16.0, channel_axis=2, truncate=32.0)
+                # np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
+                # np_mask_rgb = np_mask_rgb + blurred
+                np_mask_rgb_dilated = np.clip((np_mask_rgb + blurred2) * 0.7071, 0.0, 1.0)
+                np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7071, 0.0, 1.0)
+
+                noise_rgb = get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
+                blend_mask_rgb = np.clip(np_mask_rgb_dilated, 0.0, 1.0) ** (mask_blend_factor)
+                noised = noise_rgb[:]
+                blend_mask_rgb **= 2.0
+                noised = np_init[:] * (1.0 - blend_mask_rgb) + noised * blend_mask_rgb
+
+                np_mask_grey = np.sum(np_mask_rgb, axis=2) / 3.0
+                ref_mask = np_mask_grey < 1e-3
+
+                all_mask = np.ones((height, width), dtype=bool)
+                noised[all_mask, :] = skimage.exposure.match_histograms(
+                    noised[all_mask, :] ** 1.0, noised[ref_mask, :], channel_axis=1
                 )
+
+                init_img = Image.fromarray(np.clip(noised * 255.0, 0.0, 255.0).astype(np.uint8), mode="RGB")
+
+            def init(model, init_img):
+                image = init_img.convert("RGB")
+                image = np.array(image).astype(np.float32) / 255.0
+                image = image[None].transpose(0, 3, 1, 2)
+                image = torch.from_numpy(image)
+
+                mask_channel = None
+                if init_mask:
+                    alpha = resize_image(resize_mode, init_mask, width // 8, height // 8)
+                    mask_channel = alpha.split()[-1]
+
+                mask = None
+                if mask_channel is not None:
+                    mask = np.array(mask_channel).astype(np.float32) / 255.0
+                    mask = 1 - mask
+                    mask = np.tile(mask, (4, 1, 1))
+                    mask = mask[None].transpose(0, 1, 2, 3)
+                    mask = torch.from_numpy(mask).to(model.device)
+
+                init_image = 2.0 * image - 1.0
+                init_image = init_image.to(model.device)
+                init_latent = model.get_first_stage_encoding(
+                    model.encode_first_stage(init_image)
+                )  # move to latent space
+
+                return (
+                    init_latent,
+                    mask,
+                )
+
+            def sample_img2img(
+                init_data,
+                ddim_steps,
+                x,
+                conditioning,
+                unconditional_conditioning,
+                sampler_name,
+                batch_size=1,
+                shape=None,
+                karras=False,
+                sigma_override: dict = None,
+            ):
+                nonlocal sampler
+                t_enc_steps = t_enc
+                if hires_fix:
+                    ddim_steps = 20
+                    t_enc_steps = int(0.2 * ddim_steps)
+                else:
+                    t_enc_steps = t_enc
+                obliterate = False
+                if ddim_steps == t_enc_steps:
+                    t_enc_steps = t_enc_steps - 1
+                    obliterate = True
+
+                if sampler_name != "DDIM":
+                    samples_ddim, _ = sampler.sample_img2img(
+                        init_data=init_data,
+                        S=ddim_steps,
+                        t_enc=t_enc_steps,
+                        obliterate=obliterate,
+                        conditioning=conditioning,
+                        unconditional_conditioning=unconditional_conditioning,
+                        unconditional_guidance_scale=cfg_scale,
+                        x_T=x,
+                    )
+                else:
+                    x0, z_mask = init_data
+
+                    sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=0.0, verbose=False)
+                    z_enc = sampler.stochastic_encode(
+                        x0,
+                        torch.tensor([t_enc_steps] * batch_size).to(self.model["device"]),
+                    )
+
+                    # Obliterate masked image
+                    if z_mask is not None and obliterate:
+                        random = torch.randn(z_mask.shape, device=z_enc.device)
+                        z_enc = (z_mask * random) + ((1 - z_mask) * z_enc)
+
+                        # decode it
+                    samples_ddim = sampler.decode(
+                        z_enc,
+                        conditioning,
+                        t_enc_steps,
+                        unconditional_guidance_scale=cfg_scale,
+                        unconditional_conditioning=unconditional_conditioning,
+                        z_mask=z_mask,
+                        x0=x0,
+                    )
+                return samples_ddim
+
+            def sample(
+                init_data,
+                x,
+                conditioning,
+                unconditional_conditioning,
+                sampler_name,
+                batch_size=1,
+                shape=None,
+                karras=False,
+                sigma_override: dict = None,
+            ):
+                if sampler_name == "dpmsolver":
+                    samples_ddim, _ = sampler.sample(
+                        ddim_steps,
+                        batch_size,
+                        shape,
+                        conditioning=conditioning,
+                        unconditional_guidance_scale=cfg_scale,
+                        unconditional_conditioning=unconditional_conditioning,
+                        x_T=x,
+                        karras=karras,
+                        sigma_override=sigma_override,
+                    )
+                else:
+                    samples_ddim, _ = sampler.sample(
+                        S=ddim_steps,
+                        conditioning=conditioning,
+                        unconditional_guidance_scale=cfg_scale,
+                        unconditional_conditioning=unconditional_conditioning,
+                        x_T=x,
+                        karras=karras,
+                        sigma_override=sigma_override,
+                    )
+                return samples_ddim
+
+            def create_sampler_by_sampler_name(model):
+                nonlocal sampler_name
+                if self.model_baseline == "stable diffusion 2":
+                    v = True
+                    # model_baseline = "stable diffusion 2" covers sd2.x 768 models
+                else:
+                    # 1.x models and 2.x 512 models do not use v-prediction
+                    v = False
+                if (
+                    sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
+                ):  # TODO: check support for sd2.x
+                    sampler = PLMSSampler(model)
+                elif (
+                    sampler_name == "DDIM" and "stable diffusion 2" not in self.model_baseline
+                ):  # TODO: check support for sd2.x
+                    sampler = DDIMSampler(model)
+                elif sampler_name == "k_dpm_2_a":
+                    sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
+                elif sampler_name == "k_dpm_2":
+                    sampler = KDiffusionSampler(model, "dpm_2", v=v)
+                elif sampler_name == "k_euler_a":
+                    sampler = KDiffusionSampler(model, "euler_ancestral", v=v)
+                elif sampler_name == "k_euler":
+                    sampler = KDiffusionSampler(model, "euler", v=v)
+                elif sampler_name == "k_heun":
+                    sampler = KDiffusionSampler(model, "heun", v=v)
+                elif sampler_name == "k_lms":
+                    sampler = KDiffusionSampler(model, "lms", v=v)
+                elif sampler_name == "k_dpm_fast":
+                    sampler = KDiffusionSampler(model, "dpm_fast", v=v)
+                elif sampler_name == "k_dpm_adaptive":
+                    sampler = KDiffusionSampler(model, "dpm_adaptive", v=v)
+                elif sampler_name == "k_dpmpp_2s_a":
+                    sampler = KDiffusionSampler(model, "dpmpp_2s_ancestral", v=v)
+                elif sampler_name == "k_dpmpp_2m":
+                    sampler = KDiffusionSampler(model, "dpmpp_2m", v=v)
+                elif sampler_name == "k_dpmpp_sde":
+                    sampler = KDiffusionSampler(model, "dpmpp_sde", v=v)
+                elif sampler_name == "dpmsolver" and "stable diffusion 2" in self.model_baseline:  # only for sd2.x
+                    sampler = DPMSolverSampler(model)
+                else:
+                    logger.info("Unknown sampler: " + sampler_name)
+
+                return sampler
+
+            seed = seed_to_int(seed)
+
+            image_dict = {"seed": seed}
+            negprompt = ""
+            if "###" in prompt:
+                prompt, negprompt = prompt.split("###", 1)
+                prompt = prompt.strip()
+                negprompt = negprompt.strip()
+
+            os.makedirs(self.output_dir, exist_ok=True)
+
+            sample_path = os.path.join(self.output_dir, "samples")
+            os.makedirs(sample_path, exist_ok=True)
+
+            karras = False
+            if "karras" in sampler_name:
+                karras = True
+                sampler_name = sampler_name.replace("_karras", "")
+
             if control_type is None:
                 for m in model.modules():
                     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                         m.padding_mode = "circular" if tiling else m._orig_padding_mode
-            sampler = create_sampler_by_sampler_name(model)
+            sampler = create_sampler_by_sampler_name(model if control_type is None else self.control_net_model)
             if self.load_concepts and self.concepts_dir is not None:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
                 if prompt_tokens:
-                    process_prompt_tokens(prompt_tokens, model, self.concepts_dir)
+                    process_prompt_tokens(
+                        prompt_tokens, model if control_type is None else self.control_net_model, self.concepts_dir
+                    )
 
             all_prompts = batch_size * n_iter * [prompt]
             all_seeds = [seed + x for x in range(len(all_prompts))]
@@ -664,11 +665,13 @@ class CompVis:
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
                         cond = {
                             "c_concat": [control],
-                            "c_crossattn": [get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)],
+                            "c_crossattn": [
+                                get_learned_conditioning_with_prompt_weights(prompt, self.control_net_model, clip_skip)
+                            ],
                         }
                         un_cond = {
                             "c_concat": [control],
-                            "c_crossattn": [model.get_learned_conditioning(negprompt, 1)],
+                            "c_crossattn": [self.control_net_model.get_learned_conditioning(negprompt, 1)],
                         }
 
                         if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
@@ -677,7 +680,7 @@ class CompVis:
                             )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
-                        model.control_scales = [1.0] * 13
+                        self.control_net_model.control_scales = [1.0] * 13
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
@@ -733,7 +736,11 @@ class CompVis:
                             extra_args=extra_args,
                         )
 
-            x_samples_ddim = model.decode_first_stage(samples_ddim)
+            x_samples_ddim = (
+                model.decode_first_stage(samples_ddim)
+                if control_type is None
+                else self.control_net_model.decode_first_stage(samples_ddim)
+            )
             if control_type is None:
                 x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
             else:
@@ -798,9 +805,8 @@ class CompVis:
 
         del sampler
         if control_type is not None:
-            del model
             del self.control_net_model
             torch.cuda.empty_cache()
-            self.model["model"] = self.model["model"].to(self.model["device"])
+            model = model.to(self.model["device"])
 
         return

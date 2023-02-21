@@ -7,7 +7,7 @@ os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cu117"
 
 setup(
     name="nataili",
-    version="0.2.70",
+    version="0.2.369",
     description="",
     packages=find_packages(),
     install_requires=[
