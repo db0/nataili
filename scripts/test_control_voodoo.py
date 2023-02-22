@@ -14,7 +14,7 @@ mm = CompVisModelManager()
 
 model = "Anything Diffusion"
 
-mm.load(model)
+mm.load(model, voodoo=True)
 
 
 output_dir = f"./test_output/{str(uuid.uuid4())}"
@@ -31,7 +31,7 @@ for control_type in control_types:
         model_baseline=mm.models[model]["baseline"],
         model_name=model,
         output_dir=output_dir,
-        disable_voodoo=True,
+        disable_voodoo=False,
     )
     compvis.generate(
         prompt,

@@ -63,8 +63,11 @@ class ControlNetModelManager(BaseModelManager):
         config_path = f"{self.pkg}/{config_path}"
         logger.info(f"Loading controlLDM {model_name} for {target_name}")
         config = OmegaConf.load(config_path)
-        with DisableInitialization(disable_clip=True):
-            model = instantiate_from_config(config.model).cpu()
+        try:
+            with DisableInitialization(disable_clip=True):
+                model = instantiate_from_config(config.model)
+        except Exception as e:
+            pass
         full_name = f"{model_name}_{target_name}"
         logger.info(f"Loaded {full_name} ControlLDM")
         sd15_with_control_state_dict = self.control_nets[model_name]["state_dict"]
@@ -90,11 +93,9 @@ class ControlNetModelManager(BaseModelManager):
         logger.info(f"Loading {full_name} state dict")
         model.load_state_dict(final_state_dict, strict=True)
         logger.info(f"Loaded {full_name} state dict")
-        model.to(device if _device is None else _device)
-        model.control_model.to(device if _device is None else _device)
-        model.cond_stage_model.to(device if _device is None else _device)
         if half_precision:
             model.half()
+        del final_state_dict, sd15_with_control_state_dict, input_state_dict
         self.loaded_models[full_name] = {"model": model, "device": device, "half_precision": half_precision}
 
     def load_controlnet(

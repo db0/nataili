@@ -75,6 +75,38 @@ except ModuleNotFoundError as e:
         raise e
 
 
+def offload_model(model, cpu=None, gpu=None):
+    if cpu is None and gpu is None:
+        raise ValueError("Must specify either cpu or gpu")
+    if cpu and gpu:
+        raise ValueError("Cannot offload model to both cpu and gpu")
+    if cpu:
+        model = model.cpu()
+    if gpu:
+        model = model.to(gpu)
+    torch_gc()
+    return model
+
+
+def low_vram_mode():
+    return os.environ.get("LOW_VRAM_MODE", "0") == "1"
+
+
+def low_vram(models: list, force=False):
+    if not low_vram_mode() and not force:
+        return
+    torch_gc()
+    for m in models:
+        model, device = m
+        if device == "cpu":
+            model = offload_model(model, cpu=device)
+        elif "cuda" in device:
+            model = offload_model(model, gpu=device)
+        else:
+            raise ValueError("Unknown device")
+    torch_gc()
+
+
 class CompVis:
     def __init__(
         self,
@@ -155,6 +187,9 @@ class CompVis:
                 sampler_name = "DDIM"
                 if control_type == "canny":
                     control_name = "control_canny"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -162,13 +197,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     canny = Canny()
                     control_result = canny(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del canny
                 elif control_type == "hed":
                     control_name = "control_hed"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -176,13 +214,17 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
+
                     hed = HED()
                     control_result = hed(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del hed
                 elif control_type == "depth":
                     control_name = "control_depth"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -190,13 +232,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     depth = Depth()
                     control_result = depth(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del depth
                 elif control_type == "scribble":
                     control_name = "control_scribble"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -204,13 +249,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     scribble = Scribble()
                     control_result = scribble(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del scribble
                 elif control_type == "fakescribbles":
                     control_name = "control_scribble"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -218,13 +266,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     fake_scribbles = FakeScribbles()
                     control_result = fake_scribbles(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del fake_scribbles
                 elif control_type == "hough":
                     control_name = "control_mlsd"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -232,13 +283,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     hough = Hough()
                     control_result = hough(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del hough
                 elif control_type == "openpose":
                     control_name = "control_openpose"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -246,13 +300,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     openpose = Openpose()
                     control_result = openpose(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del openpose
                 elif control_type == "seg":
                     control_name = "control_seg"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -260,13 +317,16 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     seg = Seg()
                     control_result = seg(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del seg
                 elif control_type == "normal":
                     control_name = "control_normal"
+                    low_vram(
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                    )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
                         control_name, self.model_name, model.state_dict(), _device=self.model["device"]
@@ -274,11 +334,11 @@ class CompVis:
                     loaded_control_ldm = f"{control_name}_{self.model_name}"
                     self.model_name = loaded_control_ldm
                     self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
-                    model = model.cpu()
                     normal = Normal()
                     control_result = normal(init_img)
                     control = control_result["control"]
                     H, W, C = control_result["shape"]
+                    del normal
                 else:
                     raise ValueError(f"Invalid control_type: {control_type}")
             elif init_img is not None:
@@ -313,6 +373,35 @@ class CompVis:
                 init_mask = init_mask.convert("RGB")
                 init_mask = resize_image(resize_mode, init_mask, width, height)
                 init_mask = init_mask.convert("RGB")
+
+            """
+            vram
+            control net doesn't need first stage model on gpu
+            regular does, for img2img and hires_fix, if txt2img keep it on cpu
+            """
+            if control_type is not None:
+                low_vram(
+                    [
+                        (self.control_net_model, "cpu"),
+                        (self.control_net_model.control_model, "cpu"),
+                        (self.control_net_model.cond_stage_model, "cuda"),
+                        (self.control_net_model.first_stage_model, "cpu"),
+                    ],
+                    force=True,
+                )
+            else:
+                """
+                k-diffusion needs the model to be on gpu to create the model wrap
+                so we move it to gpu here
+                """
+                low_vram(
+                    [
+                        (model, "cuda"),
+                        (model.cond_stage_model, "cuda"),
+                        (model.first_stage_model, "cuda"),
+                    ],
+                    force=True,
+                )
 
             assert 0.0 <= denoising_strength <= 1.0, "can only work with strength in [0.0, 1.0]"
             t_enc = int(denoising_strength * ddim_steps)
@@ -374,10 +463,10 @@ class CompVis:
                     mask = 1 - mask
                     mask = np.tile(mask, (4, 1, 1))
                     mask = mask[None].transpose(0, 1, 2, 3)
-                    mask = torch.from_numpy(mask).to(model.device)
+                    mask = torch.from_numpy(mask).to(model.first_stage_model.device)
 
                 init_image = 2.0 * image - 1.0
-                init_image = init_image.to(model.device)
+                init_image = init_image.to(model.first_stage_model.device)
                 init_latent = model.get_first_stage_encoding(
                     model.encode_first_stage(init_image)
                 )  # move to latent space
@@ -561,108 +650,205 @@ class CompVis:
 
             all_prompts = batch_size * n_iter * [prompt]
             all_seeds = [seed + x for x in range(len(all_prompts))]
+            if control_type is None:
+                if self.model_name != "pix2pix":
+                    with torch.no_grad():
+                        for n in range(n_iter):
+                            logger.debug(f"Iteration: {n+1}/{n_iter}")
+                            prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
+                            seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
+                            uc = model.get_learned_conditioning(negprompt, 1)
 
-            if self.model_name != "pix2pix" and control_type is None:
-                with torch.no_grad():
-                    for n in range(n_iter):
-                        logger.debug(f"Iteration: {n+1}/{n_iter}")
-                        prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
-                        seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-                        uc = model.get_learned_conditioning(negprompt, 1)
+                            if isinstance(prompts, tuple):
+                                prompts = list(prompts)
 
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-
-                        # no need to apply the fix here, it's applied internally
-                        c = torch.cat(
-                            [
-                                get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
-                                for prompt in prompts
-                            ]
-                        )
-
-                        opt_C = 4
-                        opt_f = 8
-                        shape = [opt_C, height // opt_f, width // opt_f]
-                        # find_noise_for_image also applies the fix internally
-                        if noise_mode in ["find", "find_and_matched"]:
-                            x = torch.cat(
-                                batch_size
-                                * [
-                                    find_noise_for_image(
-                                        model,
-                                        self.model["device"],
-                                        init_img.convert("RGB"),
-                                        "",
-                                        find_noise_steps,
-                                        0.0,
-                                        normalize=True,
-                                        clip_skip=clip_skip,
-                                    )
-                                ],
-                                dim=0,
+                            # no need to apply the fix here, it's applied internally
+                            c = torch.cat(
+                                [
+                                    get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
+                                    for prompt in prompts
+                                ]
                             )
-                        else:
-                            x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
-                        init_data = init(model, init_img) if init_img else None
 
-                        samples_ddim = (
-                            sample_img2img(
-                                init_data=init_data,
+                            opt_C = 4
+                            opt_f = 8
+                            shape = [opt_C, height // opt_f, width // opt_f]
+                            # find_noise_for_image also applies the fix internally
+                            if noise_mode in ["find", "find_and_matched"]:
+                                x = torch.cat(
+                                    batch_size
+                                    * [
+                                        find_noise_for_image(
+                                            model,
+                                            self.model["device"],
+                                            init_img.convert("RGB"),
+                                            "",
+                                            find_noise_steps,
+                                            0.0,
+                                            normalize=True,
+                                            clip_skip=clip_skip,
+                                        )
+                                    ],
+                                    dim=0,
+                                )
+                            else:
+                                x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+                            init_data = init(model, init_img) if init_img else None
+                            low_vram(
+                                [
+                                    (model, "cuda"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cpu"),
+                                ],
+                                force=True,
+                            )
+                            samples_ddim = (
+                                sample_img2img(
+                                    init_data=init_data,
+                                    ddim_steps=ddim_steps,
+                                    x=x,
+                                    conditioning=c,
+                                    unconditional_conditioning=uc,
+                                    sampler_name=sampler_name,
+                                )
+                                if init_img
+                                else sample(
+                                    init_data=init_data,
+                                    x=x,
+                                    conditioning=c,
+                                    unconditional_conditioning=uc,
+                                    sampler_name=sampler_name,
+                                    karras=karras,
+                                    batch_size=batch_size,
+                                    shape=shape,
+                                    sigma_override=sigma_override,
+                                )
+                            )
+                            low_vram(
+                                [
+                                    (model, "cpu"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cuda"),
+                                ],
+                                force=True,
+                            )
+                        if hires_fix:
+                            # Put the image back together
+                            temp_x = model.decode_first_stage(samples_ddim)
+                            temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
+                            for i, x_sample in enumerate(temp_x_samples_ddim):
+                                x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
+                                x_sample = x_sample.astype(np.uint8)
+                                temp_image = Image.fromarray(x_sample)
+
+                            # Resize Image to final dimensions
+                            temp_image = ImageOps.fit(
+                                temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
+                            )
+                            shape = [opt_C, final_height // opt_f, final_width // opt_f]
+                            x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+
+                            # Re-initialise the image
+                            init_data_temp = init(model, temp_image)
+
+                            # Send image for img2img processing
+                            logger.debug("Hi-Res Fix Pass")
+                            low_vram(
+                                [
+                                    (model, "cuda"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cpu"),
+                                ],
+                                force=True,
+                            )
+                            samples_ddim = sample_img2img(
+                                init_data=init_data_temp,
                                 ddim_steps=ddim_steps,
                                 x=x,
                                 conditioning=c,
                                 unconditional_conditioning=uc,
                                 sampler_name=sampler_name,
                             )
-                            if init_img
-                            else sample(
-                                init_data=init_data,
-                                x=x,
-                                conditioning=c,
-                                unconditional_conditioning=uc,
-                                sampler_name=sampler_name,
-                                karras=karras,
-                                batch_size=batch_size,
-                                shape=shape,
-                                sigma_override=sigma_override,
+                            low_vram(
+                                [
+                                    (model, "cpu"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cuda"),
+                                ],
+                                force=True,
                             )
-                        )
-                    if hires_fix:
-                        # Put the image back together
-                        temp_x = model.decode_first_stage(samples_ddim)
-                        temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
-                        for i, x_sample in enumerate(temp_x_samples_ddim):
-                            x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
-                            x_sample = x_sample.astype(np.uint8)
-                            temp_image = Image.fromarray(x_sample)
+                else:
+                    init_image = init_img
+                    init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert(
+                        "RGB"
+                    )
+                    null_token = model.get_learned_conditioning([""], 1)
+                    with torch.no_grad():
+                        for n in range(n_iter):
+                            logger.debug(f"Iteration: {n+1}/{n_iter}")
+                            prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
+                            seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
-                        # Resize Image to final dimensions
-                        temp_image = ImageOps.fit(
-                            temp_image, (final_width, final_height), method=Image.Resampling.LANCZOS
-                        )
-                        shape = [opt_C, final_height // opt_f, final_width // opt_f]
-                        x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
+                            cond = {}
+                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
+                            init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
+                            init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
+                            cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
 
-                        # Re-initialise the image
-                        init_data_temp = init(model, temp_image)
+                            uncond = {}
+                            uncond["c_crossattn"] = [null_token]
+                            uncond["c_concat"] = [torch.zeros_like(cond["c_concat"][0])]
 
-                        # Send image for img2img processing
-                        logger.debug("Hi-Res Fix Pass")
-                        samples_ddim = sample_img2img(
-                            init_data=init_data_temp,
-                            ddim_steps=ddim_steps,
-                            x=x,
-                            conditioning=c,
-                            unconditional_conditioning=uc,
-                            sampler_name=sampler_name,
-                        )
-            elif control_type is not None:
+                            init_data = init(model, init_img) if init_img else None
+                            x0, z_mask = init_data
+
+                            extra_args = {
+                                "cond": cond,
+                                "uncond": uncond,
+                                "text_cfg_scale": cfg_scale,
+                                "image_cfg_scale": denoising_strength * 2,
+                                "mask": z_mask,
+                                "x0": x0,
+                            }
+
+                            torch.manual_seed(seed)
+                            z = torch.randn_like(cond["c_concat"][0])
+                            low_vram(
+                                [
+                                    (model, "cuda"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cpu"),
+                                ],
+                                force=True,
+                            )
+                            samples_ddim, _ = sampler.sample(
+                                S=ddim_steps,
+                                conditioning=extra_args["cond"],
+                                unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                unconditional_conditioning=extra_args["uncond"],
+                                x_T=z,
+                                karras=karras,
+                                sigma_override=sigma_override,
+                                extra_args=extra_args,
+                            )
+                            low_vram(
+                                [
+                                    (model, "cpu"),
+                                    (model.cond_stage_model, "cpu"),
+                                    (model.first_stage_model, "cuda"),
+                                ],
+                                force=True,
+                            )
+            else:
                 with torch.no_grad():
                     for n in range(n_iter):
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
+                        """
+                        NOTE:
+                        Use `self.control_net_model` instead of `model` for the control net
+                        """
                         cond = {
                             "c_concat": [control],
                             "c_crossattn": [
@@ -676,11 +862,20 @@ class CompVis:
 
                         if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
                             cond["c_crossattn"][0], un_cond["c_crossattn"][0] = fix_mismatched_tensors(
-                                cond["c_crossattn"][0], un_cond["c_crossattn"][0], model
+                                cond["c_crossattn"][0], un_cond["c_crossattn"][0], self.control_net_model
                             )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
                         self.control_net_model.control_scales = [1.0] * 13
+                        low_vram(
+                            [
+                                (self.control_net_model, "cuda"),
+                                (self.control_net_model.control_model, "cuda"),
+                                (self.control_net_model.cond_stage_model, "cpu"),
+                                (self.control_net_model.first_stage_model, "cpu"),
+                            ],
+                            force=True,
+                        )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
@@ -691,49 +886,14 @@ class CompVis:
                             unconditional_guidance_scale=cfg_scale,
                             unconditional_conditioning=un_cond,
                         )
-            else:
-                init_image = init_img
-                init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert("RGB")
-                null_token = model.get_learned_conditioning([""], 1)
-                with torch.no_grad():
-                    for n in range(n_iter):
-                        logger.debug(f"Iteration: {n+1}/{n_iter}")
-                        prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
-                        seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-
-                        cond = {}
-                        cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
-                        init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
-                        init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
-                        cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
-
-                        uncond = {}
-                        uncond["c_crossattn"] = [null_token]
-                        uncond["c_concat"] = [torch.zeros_like(cond["c_concat"][0])]
-
-                        init_data = init(model, init_img) if init_img else None
-                        x0, z_mask = init_data
-
-                        extra_args = {
-                            "cond": cond,
-                            "uncond": uncond,
-                            "text_cfg_scale": cfg_scale,
-                            "image_cfg_scale": denoising_strength * 2,
-                            "mask": z_mask,
-                            "x0": x0,
-                        }
-
-                        torch.manual_seed(seed)
-                        z = torch.randn_like(cond["c_concat"][0])
-                        samples_ddim, _ = sampler.sample(
-                            S=ddim_steps,
-                            conditioning=extra_args["cond"],
-                            unconditional_guidance_scale=extra_args["text_cfg_scale"],
-                            unconditional_conditioning=extra_args["uncond"],
-                            x_T=z,
-                            karras=karras,
-                            sigma_override=sigma_override,
-                            extra_args=extra_args,
+                        low_vram(
+                            [
+                                (self.control_net_model, "cpu"),
+                                (self.control_net_model.control_model, "cpu"),
+                                (self.control_net_model.cond_stage_model, "cpu"),
+                                (self.control_net_model.first_stage_model, "cuda"),
+                            ],
+                            force=True,
                         )
 
             x_samples_ddim = (
@@ -805,8 +965,10 @@ class CompVis:
 
         del sampler
         if control_type is not None:
+            self.control_net_manager.unload_model(loaded_control_ldm)
             del self.control_net_model
-            torch.cuda.empty_cache()
-            model = model.to(self.model["device"])
 
+            if not self.disable_voodoo:
+                del model  # cleanup voodoo model
+        torch.cuda.empty_cache()
         return
