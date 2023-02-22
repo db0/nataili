@@ -4,36 +4,16 @@ from setuptools import find_packages, setup
 
 os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cu117"
 
+requirements = []
+with open("requirements.txt") as reqstxt:
+    requirements = reqstxt.readlines()
 
 setup(
     name="nataili",
     version="0.2.6969",
     description="",
     packages=find_packages(),
-    install_requires=[
-        "torch",
-        "k-diffusion",
-        "omegaconf",
-        "diffusers",
-        "fairscale",
-        "tqdm",
-        "python-slugify",
-        "einops",
-        "facexlib",
-        "kornia",
-        "opencv-python-headless",
-        "basicsr",
-        "gfpgan",
-        "realesrgan",
-        "loguru",
-        "pydantic",
-        "bitsandbytes",
-        "transformers",
-        "open-clip-torch",
-        "pytorch-lightning",
-        "accelerate",
-        "ray",
-    ],
+    install_requires=requirements,
     entry_points={
         "console_scripts": [
             "nataili_ui_coca = nataili.ui.gradio.coca:main",
