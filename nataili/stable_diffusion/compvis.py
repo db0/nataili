@@ -39,7 +39,8 @@ from ldm2.models.diffusion.dpm_solver import DPMSolverSampler
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
 from ldm.models.diffusion.plms import PLMSSampler
-from nataili import disable_progress
+
+# from nataili import disable_progress
 from nataili.model_manager.controlnet import ControlNetModelManager
 from nataili.stable_diffusion.annotation import (
     HED,
@@ -89,11 +90,37 @@ def offload_model(model, cpu=None, gpu=None):
 
 
 def low_vram_mode():
-    return os.environ.get("LOW_VRAM_MODE", "0") == "1"
+    """
+    enabled by default
+    """
+    return os.environ.get("LOW_VRAM_MODE", "1") == "1"
 
 
-def low_vram(models: list, force=False):
-    if not low_vram_mode() and not force:
+def disable_low_vram_mode():
+    """
+    overrides low_vram_mode if set to 1
+    """
+    return os.environ.get("DISABLE_LOW_VRAM_MODE", "0") == "1"
+
+
+"""
+has no effect if low_vram_mode is disabled or if disable_low_vram_mode is enabled
+NOTE:
+"cpu" and "cuda" are the supported device types
+"cpu" could be replaced with "offload", the check would need to account for that
+the check is "cuda" in device, so "cuda:0" would also be supported
+other device types can be added as needed "mps" etc -
+    * add a check for the device type
+    * pass that device type in the list of models
+
+list of models is a list of tuples (model, device)
+example:
+    models = [(model, "cpu"), (model.cond_stage_model, "cuda:0")]
+"""
+
+
+def low_vram(models: list, force=low_vram_mode() and not disable_low_vram_mode()):
+    if not force:
         return
     torch_gc()
     for m in models:
@@ -188,7 +215,7 @@ class CompVis:
                 if control_type == "canny":
                     control_name = "control_canny"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -205,7 +232,7 @@ class CompVis:
                 elif control_type == "hed":
                     control_name = "control_hed"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -223,7 +250,7 @@ class CompVis:
                 elif control_type == "depth":
                     control_name = "control_depth"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -240,7 +267,7 @@ class CompVis:
                 elif control_type == "scribble":
                     control_name = "control_scribble"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -257,7 +284,7 @@ class CompVis:
                 elif control_type == "fakescribbles":
                     control_name = "control_scribble"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -274,7 +301,7 @@ class CompVis:
                 elif control_type == "hough":
                     control_name = "control_mlsd"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -291,7 +318,7 @@ class CompVis:
                 elif control_type == "openpose":
                     control_name = "control_openpose"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -308,7 +335,7 @@ class CompVis:
                 elif control_type == "seg":
                     control_name = "control_seg"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -325,7 +352,7 @@ class CompVis:
                 elif control_type == "normal":
                     control_name = "control_normal"
                     low_vram(
-                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")], force=True
+                        [(model, "cpu"), (model.cond_stage_model, "cpu"), (model.first_stage_model, "cpu")],
                     )
                     self.control_net_manager.load_controlnet(control_name)
                     self.control_net_manager.load_control_ldm(
@@ -387,7 +414,6 @@ class CompVis:
                         (self.control_net_model.cond_stage_model, "cuda"),
                         (self.control_net_model.first_stage_model, "cpu"),
                     ],
-                    force=True,
                 )
             else:
                 """
@@ -400,7 +426,6 @@ class CompVis:
                         (model.cond_stage_model, "cuda"),
                         (model.first_stage_model, "cuda"),
                     ],
-                    force=True,
                 )
 
             assert 0.0 <= denoising_strength <= 1.0, "can only work with strength in [0.0, 1.0]"
@@ -657,7 +682,7 @@ class CompVis:
                             logger.debug(f"Iteration: {n+1}/{n_iter}")
                             prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-                            uc = model.get_learned_conditioning(negprompt, 1)
+                            uc = get_learned_conditioning_with_prompt_weights(negprompt, model, clip_skip)
 
                             if isinstance(prompts, tuple):
                                 prompts = list(prompts)
@@ -700,7 +725,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cpu"),
                                 ],
-                                force=True,
                             )
                             samples_ddim = (
                                 sample_img2img(
@@ -730,7 +754,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cuda"),
                                 ],
-                                force=True,
                             )
                         if hires_fix:
                             # Put the image back together
@@ -759,7 +782,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cpu"),
                                 ],
-                                force=True,
                             )
                             samples_ddim = sample_img2img(
                                 init_data=init_data_temp,
@@ -775,7 +797,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cuda"),
                                 ],
-                                force=True,
                             )
                 else:
                     init_image = init_img
@@ -790,7 +811,13 @@ class CompVis:
                             seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
 
                             cond = {}
-                            cond["c_crossattn"] = [model.get_learned_conditioning(prompts, clip_skip)]
+                            c = torch.cat(
+                                [
+                                    get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip)
+                                    for prompt in prompts
+                                ]
+                            )
+                            cond["c_crossattn"] = [c]
                             init_image = 2 * torch.tensor(np.array(init_image)).float() / 255 - 1
                             init_image = rearrange(init_image, "h w c -> 1 c h w").to(self.model["device"])
                             cond["c_concat"] = [model.encode_first_stage(init_image).mode()]
@@ -819,7 +846,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cpu"),
                                 ],
-                                force=True,
                             )
                             samples_ddim, _ = sampler.sample(
                                 S=ddim_steps,
@@ -837,7 +863,6 @@ class CompVis:
                                     (model.cond_stage_model, "cpu"),
                                     (model.first_stage_model, "cuda"),
                                 ],
-                                force=True,
                             )
             else:
                 with torch.no_grad():
@@ -857,7 +882,11 @@ class CompVis:
                         }
                         un_cond = {
                             "c_concat": [control],
-                            "c_crossattn": [self.control_net_model.get_learned_conditioning(negprompt, 1)],
+                            "c_crossattn": [
+                                get_learned_conditioning_with_prompt_weights(
+                                    negprompt, self.control_net_model, clip_skip
+                                )
+                            ],
                         }
 
                         if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
@@ -874,7 +903,6 @@ class CompVis:
                                 (self.control_net_model.cond_stage_model, "cpu"),
                                 (self.control_net_model.first_stage_model, "cpu"),
                             ],
-                            force=True,
                         )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
@@ -893,7 +921,6 @@ class CompVis:
                                 (self.control_net_model.cond_stage_model, "cpu"),
                                 (self.control_net_model.first_stage_model, "cuda"),
                             ],
-                            force=True,
                         )
 
             x_samples_ddim = (

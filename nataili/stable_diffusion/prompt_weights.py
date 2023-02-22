@@ -28,18 +28,21 @@ prompt_filter_regex = r"[\(\)]|:\d+(\.\d+)?"
 
 def fix_mismatched_tensors(conditioning, unconditional_conditioning, model):
     if conditioning.shape[1] < unconditional_conditioning.shape[1]:
-        unconditional_conditioning = unconditional_conditioning.to(conditioning.get_device())
+        conditioning = conditioning.to(model.cond_stage_model.device)
+        unconditional_conditioning = unconditional_conditioning.to(model.cond_stage_model.device)
         dim_to_add: int = unconditional_conditioning.shape[1] - conditioning.shape[1]
-        paddings = torch.zeros(conditioning.shape[0], dim_to_add, conditioning.shape[2]).to(model.device)
+        paddings = torch.zeros(conditioning.shape[0], dim_to_add, conditioning.shape[2]).to(
+            model.cond_stage_model.device
+        )
         conditioning = torch.cat((conditioning, paddings), dim=1)
         logger.debug(f"Updated Conditioning shape = {conditioning.shape}")
 
     elif conditioning.shape[1] > unconditional_conditioning.shape[1]:
-        unconditional_conditioning = unconditional_conditioning.to(conditioning.get_device())
+        unconditional_conditioning = unconditional_conditioning.to(model.cond_stage_model.device)
         dim_to_add: int = conditioning.shape[1] - unconditional_conditioning.shape[1]
         paddings = torch.zeros(
             unconditional_conditioning.shape[0], dim_to_add, unconditional_conditioning.shape[2]
-        ).to(model.device)
+        ).to(model.cond_stage_model.device)
         unconditional_conditioning = torch.cat((unconditional_conditioning, paddings), dim=1)
         logger.debug(f"Updated Unonditioning shape = {unconditional_conditioning.shape}")
 
