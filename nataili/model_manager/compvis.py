@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -228,7 +229,13 @@ class DisableInitialization:
             return self.create_model_and_transforms(*args, pretrained=None, **kwargs)
 
         def CLIPTextModel_from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs):
-            res = self.CLIPTextModel_from_pretrained(None, *model_args, **kwargs)
+            if sys.version_info >= (3, 9):
+                res = self.CLIPTextModel_from_pretrained(
+                    None, *model_args, config=pretrained_model_name_or_path, state_dict={}, **kwargs
+                )
+            else:
+                res = self.CLIPTextModel_from_pretrained(None, *model_args, **kwargs)
+
             res.name_or_path = pretrained_model_name_or_path
             return res
 
