@@ -229,10 +229,13 @@ class DisableInitialization:
             return self.create_model_and_transforms(*args, pretrained=None, **kwargs)
 
         def CLIPTextModel_from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs):
-            if sys.version_info >= (3, 9):
-                res = self.CLIPTextModel_from_pretrained(
-                    None, *model_args, config=pretrained_model_name_or_path, state_dict={}, **kwargs
-                )
+            if sys.version_info != (3, 8, 10):
+                try:
+                    res = self.CLIPTextModel_from_pretrained(
+                        None, *model_args, config=pretrained_model_name_or_path, state_dict={}, **kwargs
+                    )
+                except Exception as e:
+                    res = self.CLIPTextModel_from_pretrained(None, *model_args, **kwargs)
             else:
                 res = self.CLIPTextModel_from_pretrained(None, *model_args, **kwargs)
 
