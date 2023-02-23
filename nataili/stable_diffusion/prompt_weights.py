@@ -15,6 +15,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import math
 import re
 
 import torch
@@ -69,8 +70,52 @@ def update_conditioning(
     return current_prompt_c
 
 
+# Parse A1111 ((style)) [weights]
+# into nataili (style:1.21) (weights:0.9)
+# Expected results:
+# "Hey (how) are you?" -> "Hey (how:1.10) are you?"
+# "Hey (((how))) are you?" -> "Hey (how:1.33) are you?"
+# "Hey (how:1.212) are you?" -> "Hey (how:1.212) are you?"
+# "Hey [[how]] are you?" -> "Hey (how:0.81) are you?"
+# "Hey ((how)) are (you) [[doing]] [today]" -> "Hey (how:1.21) are (you:1.10) (doing:0.81) (today:0.90)"
+def rewrite_a1111_style_weights(prompt):
+    def rewrite_for_char(prompt, open_char="(", close_char=")", max_chars=5, weight_basis=1.1, skip_if_colon=True):
+        # Iterate over the maximum number of modifier characters downwards
+        for num_chars in range(max_chars, 0, -1):
+            open = open_char * num_chars
+            close = close_char * num_chars
+
+            # Find subprompt with num_chars chars
+            subprompt_open_i = prompt.find(open)
+            subprompt_close_i = prompt.find(close, subprompt_open_i + 1)
+            while subprompt_open_i != -1 and subprompt_close_i != -1:
+                subprompt = prompt[subprompt_open_i + num_chars : subprompt_close_i]
+
+                # If subprompt contains a ':', it's already in nataili style
+                if subprompt.find(":") == -1 or not skip_if_colon:
+                    weight = math.pow(weight_basis, num_chars)
+
+                    # Replace the prompt with the nataili-style prompt
+                    prompt = prompt.replace(open + subprompt + close, f"({subprompt}:{weight:.2f})")
+
+                # Find next subprompt
+                subprompt_open_i = prompt.find("(", subprompt_open_i + 1)
+                subprompt_close_i = prompt.find(")", subprompt_open_i + 1)
+        return prompt
+
+    # Rewrite for ( and ) trains
+    prompt = rewrite_for_char(prompt, open_char="(", close_char=")", max_chars=5, weight_basis=1.1)
+    # Rewrite for [ and ] trains
+    prompt = rewrite_for_char(prompt, open_char="[", close_char="]", max_chars=5, weight_basis=0.9)
+
+    return prompt
+
+
 @autocast_cuda
-def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None):
+def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None, a1111_style_weights=True):
+    if a1111_style_weights:
+        prompt = rewrite_a1111_style_weights(prompt)
+
     # Get a filtered prompt without (, ), and :number + conditioning
     filtered_whole_prompt = re.sub(prompt_filter_regex, "", prompt)
 
