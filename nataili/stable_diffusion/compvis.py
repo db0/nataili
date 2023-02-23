@@ -638,8 +638,11 @@ class CompVis:
                 elif sampler_name == "dpmsolver" and "stable diffusion 2" in self.model_baseline:  # only for sd2.x
                     sampler = DPMSolverSampler(model)
                 else:
-                    logger.info("Unknown sampler: " + sampler_name)
-
+                    logger.error(
+                        f"Sampler '{sampler_name}' unknown or does not match model."
+                    )
+                    # Ensure we don't hit an UnboundLocalError because sampler is not set
+                    raise Exception(f"Sampler name not found of does not match model baseline {self.model_baseline}")
                 return sampler
 
             seed = seed_to_int(seed)
