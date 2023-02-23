@@ -20,7 +20,7 @@ models = [
     {"name": "PRMJ", "trigger": ""},
 ]
 
-prompt = "anime girl holding a giant nvidia gtx 1080ti gpu graphics card"
+prompt = "anime girl holding a giant nvidia gtx 1080ti gpu graphics card ### weird mouth,weird teeth,incorrect anatomy, bad anatomy, ugly, odd, hideous, unsightly, extra limbs, poorly drawn, poorly drawn face, bad drawing, sketch, disfigured, cropped, out of frame,fully clothed,sad,agony,pain,cut off,trimmed,headpiece, head necklace,out of frame, malformed,hideous face, too many limbs, missing fingers, too many fingers, text, bad drawing, sketch, incorrect anatomy, hideous, unsightly, extra limbs, poorly drawn, poorly drawn face, disfigured, cropped"
 
 output_dir = f"./test_output/{str(uuid.uuid4())}"
 mm = CompVisModelManager(download_reference=False)
