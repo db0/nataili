@@ -96,13 +96,6 @@ def low_vram_mode():
     return os.environ.get("LOW_VRAM_MODE", "1") == "1"
 
 
-def disable_low_vram_mode():
-    """
-    overrides low_vram_mode if set to 1
-    """
-    return os.environ.get("DISABLE_LOW_VRAM_MODE", "0") == "1"
-
-
 """
 has no effect if low_vram_mode is disabled or if disable_low_vram_mode is enabled
 NOTE:
@@ -119,8 +112,8 @@ example:
 """
 
 
-def low_vram(models: list, force=low_vram_mode() and not disable_low_vram_mode()):
-    if not force:
+def low_vram(models: list):
+    if not low_vram_mode():
         return
     torch_gc()
     for m in models:

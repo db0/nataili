@@ -86,9 +86,6 @@ class Cache:
         self.cursor = self.conn.cursor()
         self.create_sqlite_db()
 
-    def __del__(self):
-        self.conn.close()
-
     def list_dir(self, input_directory, extensions=[".webp"]):
         """
         List all files in a directory
@@ -109,6 +106,10 @@ class Cache:
         """
         self.cursor.execute("SELECT file FROM cache")
         return [x[0] for x in self.cursor.fetchall()]
+
+    def get_all_export(self):
+        self.cursor.execute("SELECT file, pil_hash FROM cache")
+        return {x[0]: x[1] for x in self.cursor.fetchall()}
 
     def filter_list(self, input_list):
         """
