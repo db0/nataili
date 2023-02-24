@@ -38,6 +38,7 @@ class ModelManager:
         gfpgan: bool = False,
         safety_checker: bool = False,
         codeformer: bool = False,
+        controlnet: bool = False,
     ):
         if aitemplate:
             from nataili.model_manager.aitemplate import AITemplateModelManager
@@ -93,6 +94,12 @@ class ModelManager:
             self.codeformer = CodeFormerModelManager()
         else:
             self.codeformer = None
+        if controlnet:
+            from nataili.model_manager.controlnet import ControlNetModelManager
+
+            self.controlnet = ControlNetModelManager()
+        else:
+            self.controlnet = None
         self.cuda_available = torch.cuda.is_available()
         self.models = {}
         self.available_models = []
@@ -116,6 +123,7 @@ class ModelManager:
             self.gfpgan,
             self.safety_checker,
             self.codeformer,
+            self.controlnet,
         ]
         # reset available models
         self.available_models = []
@@ -142,6 +150,7 @@ class ModelManager:
             self.gfpgan,
             self.safety_checker,
             self.codeformer,
+            self.controlnet,
         ]
         self.available_models = []  # reset available models
         for model_type in model_types:
@@ -169,6 +178,8 @@ class ModelManager:
             return self.gfpgan.download_model(model_name)
         if self.safety_checker is not None and model_name in self.safety_checker.models:
             return self.safety_checker.download_model(model_name)
+        if self.controlnet is not None and model_name in self.controlnet.models:
+            return self.controlnet.download_model(model_name)
 
     def download_all(self):
         if self.aitemplate is not None:
@@ -189,6 +200,8 @@ class ModelManager:
             self.gfpgan.download_all_models()
         if self.safety_checker is not None:
             self.safety_checker.download_all_models()
+        if self.controlnet is not None:
+            self.controlnet.download_all_models()
 
     def validate_model(self, model_name, skip_checksum=False):
         if self.blip is not None and model_name in self.blip.models:
@@ -207,6 +220,8 @@ class ModelManager:
             return self.gfpgan.validate_model(model_name, skip_checksum)
         if self.safety_checker is not None and model_name in self.safety_checker.models:
             return self.safety_checker.validate_model(model_name, skip_checksum)
+        if self.controlnet is not None and model_name in self.controlnet.models:
+            return self.controlnet.validate_model(model_name, skip_checksum)
 
     def taint_models(self, models):
         if self.aitemplate is not None and any(model in self.aitemplate.models for model in models):
@@ -227,6 +242,8 @@ class ModelManager:
             self.gfpgan.taint_models(models)
         if self.safety_checker is not None and any(model in self.safety_checker.models for model in models):
             self.safety_checker.taint_models(models)
+        if self.controlnet is not None and any(model in self.controlnet.models for model in models):
+            self.controlnet.taint_models(models)
 
     def unload_model(self, model_name):
         if self.aitemplate is not None and model_name in self.aitemplate.models:
@@ -254,6 +271,9 @@ class ModelManager:
             del self.loaded_models[model_name]
         if self.safety_checker is not None and model_name in self.safety_checker.models:
             self.safety_checker.unload_model(model_name)
+            del self.loaded_models[model_name]
+        if self.controlnet is not None and model_name in self.controlnet.models:
+            self.controlnet.unload_model(model_name)
             del self.loaded_models[model_name]
 
     def get_loaded_models_names(self, string=False):

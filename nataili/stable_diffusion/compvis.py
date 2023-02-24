@@ -143,6 +143,7 @@ class CompVis:
         filter_nsfw=False,
         safety_checker=None,
         disable_voodoo=False,
+        control_net_manager=None,
     ):
         self.model = model
         self.model_name = model_name
@@ -164,7 +165,7 @@ class CompVis:
         self.feature_extractor = CLIPFeatureExtractor()
         self.disable_voodoo = disable_voodoo
         self.apply_control = None
-        self.control_net_manager = ControlNetModelManager()
+        self.control_net_manager = ControlNetModelManager() if control_net_manager is None else control_net_manager
         self.control_net_model = None
 
     @autocast_cuda
