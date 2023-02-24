@@ -99,8 +99,8 @@ def rewrite_a1111_style_weights(prompt):
                     prompt = prompt.replace(open + subprompt + close, f"({subprompt}:{weight:.2f})")
 
                 # Find next subprompt
-                subprompt_open_i = prompt.find("(", subprompt_open_i + 1)
-                subprompt_close_i = prompt.find(")", subprompt_open_i + 1)
+                subprompt_open_i = prompt.find(open, subprompt_open_i + 1)
+                subprompt_close_i = prompt.find(close, subprompt_open_i + 1)
         return prompt
 
     # Rewrite for ( and ) trains
