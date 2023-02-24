@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import math
+import os
 import re
 
 import torch
@@ -128,9 +129,15 @@ def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None, 
     # Find the first () delimited subprompt
     subprompt_open_i = prompt.find("(")
     subprompt_close_i = prompt.find(")", subprompt_open_i + 1)
-
     # Process the (next) subprompt
-    while subprompt_open_i != -1 and subprompt_close_i != -1:
+    while (
+        subprompt_open_i != -1
+        and subprompt_close_i != -1
+        # Too many weights add an exponential calculation.
+        # This is a reasonable amount to keep the inference running,
+        # while still allowing to bypass with an env var
+        and weights_count < os.getenv("MAX_WEIGHTS_COUNT", 12)
+    ):
         subprompt = prompt[subprompt_open_i + 1 : subprompt_close_i]
         weight_i = subprompt.find(":")
         subprompt_wo_weight = subprompt[0:weight_i]

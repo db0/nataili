@@ -672,6 +672,9 @@ class CompVis:
             all_seeds = [seed + x for x in range(len(all_prompts))]
             if control_type is None:
                 if self.model_name != "pix2pix":
+                    logger.debug(
+                        f"model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                    )
                     with torch.no_grad():
                         for n in range(n_iter):
                             logger.debug(f"Iteration: {n+1}/{n_iter}")
@@ -721,6 +724,9 @@ class CompVis:
                                     (model.first_stage_model, "cpu"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                             samples_ddim = (
                                 sample_img2img(
                                     init_data=init_data,
@@ -750,7 +756,13 @@ class CompVis:
                                     (model.first_stage_model, "cuda"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] after sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                         if hires_fix:
+                            logger.debug(
+                                f"[Low VRAM] hires fix start - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                             # Put the image back together
                             temp_x = model.decode_first_stage(samples_ddim)
                             temp_x_samples_ddim = torch.clamp((temp_x + 1.0) / 2.0, min=0.0, max=1.0)
@@ -778,6 +790,9 @@ class CompVis:
                                     (model.first_stage_model, "cpu"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] hi-res fix -  before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                             samples_ddim = sample_img2img(
                                 init_data=init_data_temp,
                                 ddim_steps=ddim_steps,
@@ -793,7 +808,13 @@ class CompVis:
                                     (model.first_stage_model, "cuda"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] hi-res fix -  before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                 else:
+                    logger.debug(
+                        f"[Low VRAM] Pix2pix start - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                    )
                     init_image = init_img
                     init_image = ImageOps.fit(init_image, (width, height), method=Image.Resampling.LANCZOS).convert(
                         "RGB"
@@ -842,6 +863,9 @@ class CompVis:
                                     (model.first_stage_model, "cpu"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
                             samples_ddim, _ = sampler.sample(
                                 S=ddim_steps,
                                 conditioning=extra_args["cond"],
@@ -859,7 +883,13 @@ class CompVis:
                                     (model.first_stage_model, "cuda"),
                                 ],
                             )
+                            logger.debug(
+                                f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
+                            )
             else:
+                logger.debug(
+                    f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                )
                 with torch.no_grad():
                     for n in range(n_iter):
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
@@ -899,6 +929,9 @@ class CompVis:
                                 (self.control_net_model.first_stage_model, "cpu"),
                             ],
                         )
+                        logger.debug(
+                            f"[Low VRAM] controlnet before sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                        )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
@@ -917,7 +950,13 @@ class CompVis:
                                 (self.control_net_model.first_stage_model, "cuda"),
                             ],
                         )
+                        logger.debug(
+                            f"[Low VRAM] controlnet after sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                        )
 
+            logger.debug(
+                f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
+            )
             x_samples_ddim = (
                 model.decode_first_stage(samples_ddim)
                 if control_type is None
