@@ -130,6 +130,7 @@ def get_learned_conditioning_with_prompt_weights(prompt, model, clip_skip=None, 
     subprompt_open_i = prompt.find("(")
     subprompt_close_i = prompt.find(")", subprompt_open_i + 1)
     # Process the (next) subprompt
+    weights_count = 0
     while (
         subprompt_open_i != -1
         and subprompt_close_i != -1
