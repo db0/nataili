@@ -888,7 +888,7 @@ class CompVis:
                             )
             else:
                 logger.debug(
-                    f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                    f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                 )
                 with torch.no_grad():
                     for n in range(n_iter):
@@ -930,7 +930,7 @@ class CompVis:
                             ],
                         )
                         logger.debug(
-                            f"[Low VRAM] controlnet before sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                            f"[Low VRAM] controlnet before sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
@@ -951,7 +951,7 @@ class CompVis:
                             ],
                         )
                         logger.debug(
-                            f"[Low VRAM] controlnet after sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}, model.control_model.device = {self.control_net_model.control_model.device}"
+                            f"[Low VRAM] controlnet after sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {self.control_net_model.cond_stage_model.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
 
             logger.debug(
