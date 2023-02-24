@@ -63,6 +63,7 @@ class ClipModelManager(BaseModelManager):
             "coca_ViT-L-14",
             pretrained=model_path,
             device=device,
+            precision="fp16" if half_precision else "fp32",
         )
         model = model.eval()
         model.to(device)
@@ -84,7 +85,11 @@ class ClipModelManager(BaseModelManager):
         else:
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         model, _, preprocess = open_clip.create_model_and_transforms(
-            model_name, pretrained=pretrained, cache_dir=self.path
+            model_name,
+            pretrained=pretrained,
+            cache_dir=self.path,
+            device=device,
+            precision="fp16" if half_precision else "fp32",
         )
         model = model.eval()
         model.to(device)

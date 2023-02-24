@@ -41,7 +41,7 @@ class Interrogator:
         self.cache_image = Cache(self.model["cache_name"], cache_parentname="embeds", cache_subname="image")
         self.embed_lists = {}
 
-    def load(self, key: str, text_array: List[str], individual: bool = True):
+    def load(self, key: str, text_array: List[str], individual: bool = True, device: str = "cuda"):
         """
         :param key: Key to use for embed_lists
         :param text_array: List of text to embed
@@ -72,18 +72,22 @@ class Interrogator:
                 text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
                 filename = f"{self.cache.cache_dir}/{text_hash}.npy"
                 logger.debug(f"text: {text}, text_hash: {text_hash}, filename: {filename}")
-                self.embed_lists[key][text] = torch.from_numpy(np.load(filename)).float()
+                embed = torch.from_numpy(np.load(filename)).float().to(device)
+                if len(embed.shape) == 1:
+                    embed = embed.view(1, -1)
+                self.embed_lists[key][text] = embed
         else:
             with torch.no_grad():
-                text_features = torch.cat(
-                    [
-                        torch.from_numpy(
-                            np.load(f"{self.cache.cache_dir}/{hashlib.sha256(text.encode('utf-8')).hexdigest()}.npy")
-                        ).float()
-                        for text in text_array
-                    ],
-                    dim=0,
-                )
+                text_features = []
+                for text in text_array:
+                    text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                    filename = f"{self.cache.cache_dir}/{text_hash}.npy"
+                    logger.debug(f"text: {text}, text_hash: {text_hash}, filename: {filename}")
+                    embed = torch.from_numpy(np.load(filename)).float().to(device)
+                    if len(embed.shape) == 1:
+                        embed = embed.view(1, -1)
+                    text_features.append(embed)
+                text_features = torch.cat(text_features, dim=0)
             text_features /= text_features.norm(dim=-1, keepdim=True)
             self.embed_lists[key] = text_features
 
@@ -107,9 +111,9 @@ class Interrogator:
         :return: dict of {text: {text: similarity}}
         """
         if key not in self.embed_lists:
-            self.load(key, text_array, individual=True)
+            self.load(key, text_array, individual=True, device=device)
         if key_2 not in self.embed_lists:
-            self.load(key_2, text_array_2, individual=True)
+            self.load(key_2, text_array_2, individual=True, device=device)
         similarity = {}
         for text in text_array:
             text_features = self.embed_lists[key][text].to(device)
@@ -139,7 +143,7 @@ class Interrogator:
         """
         if key not in self.embed_lists:
             logger.debug(f"Loading {key} embeds")
-            self.load(key, text_array, individual=True)
+            self.load(key, text_array, individual=True, device=device)
         logger.debug(f"{len(text_array)} text_array: {text_array}")
         logger.debug(f"{len(self.embed_lists[key])} embed_lists[key]: {self.embed_lists[key]}")
         similarity = {}
@@ -164,7 +168,7 @@ class Interrogator:
         """
         top_count = min(top_count, len(text_array))
         if key not in self.embed_lists:
-            self.load(key, text_array, individual=False)
+            self.load(key, text_array, individual=False, device=device)
         text_features = self.embed_lists[key].to(device)
 
         similarity = torch.zeros((1, len(text_array))).to(device)
