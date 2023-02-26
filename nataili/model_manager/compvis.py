@@ -32,7 +32,7 @@ from nataili import enable_ray_alternative
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
-from nataili.util.voodoo import push_model_to_plasma, get_model_cache_filename
+from nataili.util.voodoo import push_model_to_plasma, get_model_cache_filename, have_model_cache
 
 
 class CompVisModelManager(BaseModelManager):
@@ -179,7 +179,7 @@ class CompVisModelManager(BaseModelManager):
         logger.debug(f"Loading model {model_name} on {device}")
         logger.debug(f"Model path: {ckpt_path}")
 
-        if voodoo and enable_ray_alternative.active and get_model_cache_filename(ckpt_path):
+        if voodoo and enable_ray_alternative.active and have_model_cache(ckpt_path):
             model = get_model_cache_filename(ckpt_path)
         else:
             model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)

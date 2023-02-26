@@ -87,6 +87,10 @@ def get_model_cache_filename(model_filename):
     return os.path.join(DISK_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
 
 
+def have_model_cache(model_filename):
+    return os.path.exists(get_model_cache_filename(model_filename))
+
+
 @contextlib.contextmanager
 def load_from_plasma(ref, device="cuda"):
     if not enable_ray_alternative.active:
