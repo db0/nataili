@@ -34,11 +34,9 @@ warnings.filterwarnings("ignore")
 
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath("./ray")
-    # Don't remove old store if we're using ray alternative
-    if not enable_ray_alternative.active:
-        shutil.rmtree(ray_temp_dir, ignore_errors=True)
-        os.makedirs(ray_temp_dir, exist_ok=True)
-        ray.init(_temp_dir=ray_temp_dir)
+    shutil.rmtree(ray_temp_dir, ignore_errors=True)
+    os.makedirs(ray_temp_dir, exist_ok=True)
+    ray.init(_temp_dir=ray_temp_dir)
     logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
 else:
     logger.init_warn("Ray temp dir'", status="OS Default")
