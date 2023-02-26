@@ -34,7 +34,7 @@ from nataili.util.logger import logger
 warnings.filterwarnings("ignore")
 
 
-DISK_CACHE_DIR = os.path.join(os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray")), "model-cache")
+MODEL_CACHE_DIR = os.path.join(os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray")), "model-cache")
 
 
 if enable_local_ray_temp.active:
@@ -84,7 +84,7 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
 
 
 def get_model_cache_filename(model_filename):
-    return os.path.join(DISK_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
+    return os.path.join(MODEL_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
 
 
 def have_model_cache(model_filename):
@@ -117,6 +117,9 @@ def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef
         if os.path.exists(cachefile):
             # Don't store if it already exists
             return cachefile
+        # Create cache directory if it doesn't already exist
+        if not os.path.isdir(MODEL_CACHE_DIR):
+            os.makedirs(ray_temp_dir, exist_ok=True)
         # Serialise our object
         with open(cachefile, "wb") as cache:
             pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
