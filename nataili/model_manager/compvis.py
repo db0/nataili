@@ -32,7 +32,7 @@ from nataili import enable_ray_alternative
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
-from nataili.util.voodoo import push_model_to_plasma, get_model_cache_filename, have_model_cache
+from nataili.util.voodoo import get_model_cache_filename, have_model_cache, push_model_to_plasma
 
 
 class CompVisModelManager(BaseModelManager):

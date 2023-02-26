@@ -19,9 +19,9 @@ import contextlib
 import copy
 import glob
 import os
+import pickle
 import shutil
 import warnings
-import pickle
 from typing import Dict, List, Tuple, TypeVar
 
 import ray
@@ -99,7 +99,7 @@ def load_from_plasma(ref, device="cuda"):
     else:
         # Load object from our persistent store
         with open(ref, "rb") as cache:
-            skeleton, weights = pickle.load(cache)        
+            skeleton, weights = pickle.load(cache)
     replace_tensors(skeleton, weights, device=device)
     skeleton.eval().to(device, memory_format=torch.channels_last)
     yield skeleton
@@ -112,7 +112,7 @@ def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef
         ref = ray.put(extract_tensors(model))
     else:
         # Store object directly on disk
-         
+
         cachefile = get_model_cache_filename(filename)
         if os.path.exists(cachefile):
             # Don't store if it already exists
