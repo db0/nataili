@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
 import time
+import pickle
 from pathlib import Path
 
 import open_clip
@@ -177,11 +178,17 @@ class CompVisModelManager(BaseModelManager):
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         logger.debug(f"Loading model {model_name} on {device}")
         logger.debug(f"Model path: {ckpt_path}")
-        model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
-        model = model.half() if half_precision else model
+
+        # Disk Cached?
+        cachefile = f"{ckpt_path}.cache"
+        if os.path.exists(cachefile):
+            model = cachefile
+        else:
+            model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
+            model = model.half() if half_precision else model
         if voodoo:
             logger.debug(f"Doing voodoo on {model_name}")
-            model = push_model_to_plasma(model) if isinstance(model, torch.nn.Module) else model
+            model = push_model_to_plasma(model, ckpt_path) if isinstance(model, torch.nn.Module) else model
         else:
             model = model.to(device)
         return {"model": model, "device": device, "half_precision": half_precision}

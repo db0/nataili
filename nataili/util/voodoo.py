@@ -20,6 +20,7 @@ import copy
 import os
 import shutil
 import warnings
+import pickle
 from typing import Dict, List, Tuple, TypeVar
 
 import ray
@@ -77,16 +78,25 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
 
 @contextlib.contextmanager
 def load_from_plasma(ref, device="cuda"):
-    skeleton, weights = ray.get(ref)
+    cachefile = ref
+    cache = open(cachefile, "rb")
+    obj = pickle.load(cache)
+    skeleton, weights = obj
     replace_tensors(skeleton, weights, device=device)
     skeleton.eval().to(device, memory_format=torch.channels_last)
     yield skeleton
     torch.cuda.empty_cache()
 
 
-def push_model_to_plasma(model: torch.nn.Module) -> ray.ObjectRef:
-    ref = ray.put(extract_tensors(model))
-    return ref
+def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef:
+    # Save a cached version if there isn't one
+    cachefile = f"{filename}.cache"
+    if os.path.exists(cachefile):
+        return cachefile
+    cache = open(cachefile, "wb")
+    pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
+    cache.close()
+    return cachefile
 
 
 @contextlib.contextmanager
