@@ -31,7 +31,7 @@ from ldm.util import instantiate_from_config
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
-from nataili.util.voodoo import push_model_to_plasma
+from nataili.util.voodoo import push_model_to_plasma, get_model_cache_filename
 
 
 class CompVisModelManager(BaseModelManager):
@@ -178,10 +178,8 @@ class CompVisModelManager(BaseModelManager):
         logger.debug(f"Loading model {model_name} on {device}")
         logger.debug(f"Model path: {ckpt_path}")
 
-        if voodoo:
-            cachefile = f"{ckpt_path}.cache"
-            if os.path.exists(cachefile):
-                model = cachefile
+        if voodoo and get_model_cache_filename(ckpt_path):
+            model = get_model_cache_filename(ckpt_path)
         else:
             model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
             model = model.half() if half_precision else model

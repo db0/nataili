@@ -33,6 +33,10 @@ from nataili.util.logger import logger
 
 warnings.filterwarnings("ignore")
 
+
+DISK_CACHE_DIR = os.path.join(os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray")), "model-cache")
+
+
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
     session_dirs = glob.glob(os.path.join(ray_temp_dir, "session_*"))
@@ -79,6 +83,10 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
             module.register_buffer(name, torch.as_tensor(array, device=device))
 
 
+def get_model_cache_filename(model_filename):
+    return os.path.join(DISK_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
+
+
 @contextlib.contextmanager
 def load_from_plasma(ref, device="cuda"):
     if not enable_ray_alternative.active:
@@ -99,8 +107,9 @@ def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef
         # Store object in ray object store
         ref = ray.put(extract_tensors(model))
     else:
-        # Store object directly on disk 
-        cachefile = f"{filename}.cache"
+        # Store object directly on disk
+         
+        cachefile = get_model_cache_filename(filename)
         if os.path.exists(cachefile):
             # Don't store if it already exists
             return cachefile
