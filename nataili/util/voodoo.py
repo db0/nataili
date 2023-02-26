@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import contextlib
 import copy
+import glob
 import os
 import shutil
 import warnings
@@ -33,8 +34,10 @@ from nataili.util.logger import logger
 warnings.filterwarnings("ignore")
 
 if enable_local_ray_temp.active:
-    ray_temp_dir = os.path.abspath("./ray")
-    shutil.rmtree(ray_temp_dir, ignore_errors=True)
+    ray_temp_dir = os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
+    session_dirs = glob.glob(os.path.join(ray_temp_dir, "session_*"))
+    for adir in session_dirs:
+        shutil.rmtree(adir, ignore_errors=True)
     os.makedirs(ray_temp_dir, exist_ok=True)
     ray.init(_temp_dir=ray_temp_dir)
     logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
