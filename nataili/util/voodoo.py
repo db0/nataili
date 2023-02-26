@@ -119,7 +119,7 @@ def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef
             return cachefile
         # Create cache directory if it doesn't already exist
         if not os.path.isdir(MODEL_CACHE_DIR):
-            os.makedirs(ray_temp_dir, exist_ok=True)
+            os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
         # Serialise our object
         with open(cachefile, "wb") as cache:
             pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
