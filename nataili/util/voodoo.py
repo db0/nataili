@@ -26,7 +26,7 @@ from typing import Dict, List, Tuple, TypeVar
 import ray
 import torch
 
-from nataili import enable_local_ray_temp
+from nataili import enable_local_ray_temp, enable_ray_alternative
 from nataili.aitemplate import Model
 from nataili.util.logger import logger
 
@@ -34,9 +34,11 @@ warnings.filterwarnings("ignore")
 
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath("./ray")
-    shutil.rmtree(ray_temp_dir, ignore_errors=True)
-    os.makedirs(ray_temp_dir, exist_ok=True)
-    ray.init(_temp_dir=ray_temp_dir)
+    # Don't remove old store if we're using ray alternative
+    if not enable_ray_alternative.active:
+        shutil.rmtree(ray_temp_dir, ignore_errors=True)
+        os.makedirs(ray_temp_dir, exist_ok=True)
+        ray.init(_temp_dir=ray_temp_dir)
     logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
 else:
     logger.init_warn("Ray temp dir'", status="OS Default")
@@ -78,10 +80,13 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
 
 @contextlib.contextmanager
 def load_from_plasma(ref, device="cuda"):
-    cachefile = ref
-    cache = open(cachefile, "rb")
-    obj = pickle.load(cache)
-    skeleton, weights = obj
+    if not enable_ray_alternative.active:
+        # Load object from ray object store
+        skeleton, weights = ray.get(ref)
+    else:
+        # Load object from our persistent store
+        with open(ref, "rb") as cache:
+            skeleton, weights = pickle.load(cache)        
     replace_tensors(skeleton, weights, device=device)
     skeleton.eval().to(device, memory_format=torch.channels_last)
     yield skeleton
@@ -89,14 +94,21 @@ def load_from_plasma(ref, device="cuda"):
 
 
 def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef:
-    # Save a cached version if there isn't one
-    cachefile = f"{filename}.cache"
-    if os.path.exists(cachefile):
-        return cachefile
-    cache = open(cachefile, "wb")
-    pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
-    cache.close()
-    return cachefile
+    if not enable_ray_alternative.active or not filename:
+        # Store object in ray object store
+        ref = ray.put(extract_tensors(model))
+    else:
+        # Store object directly on disk 
+        cachefile = f"{filename}.cache"
+        if os.path.exists(cachefile):
+            # Don't store if it already exists
+            return cachefile
+        # Serialise our object
+        with open(cachefile, "wb") as cache:
+            pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
+        ref = cachefile
+
+    return ref
 
 
 @contextlib.contextmanager
