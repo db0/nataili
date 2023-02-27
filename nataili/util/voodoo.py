@@ -88,7 +88,14 @@ def get_model_cache_filename(model_filename):
 
 
 def have_model_cache(model_filename):
-    return os.path.exists(get_model_cache_filename(model_filename))
+    cache_file = get_model_cache_filename(model_filename)
+    if os.path.exists(cache_file):
+        # We have a cache file but only consider it valid if it's up to date
+        model_timestamp = os.path.getmtime(model_filename)
+        cache_timestamp = os.path.getmtime(cache_file)
+        if model_timestamp <= cache_timestamp:
+            return True
+    return False
 
 
 @contextlib.contextmanager
@@ -106,16 +113,14 @@ def load_from_plasma(ref, device="cuda"):
     torch.cuda.empty_cache()
 
 
-def push_model_to_plasma(model: torch.nn.Module, filename=None) -> ray.ObjectRef:
-    if not enable_ray_alternative.active or not filename:
+def push_model_to_plasma(model: torch.nn.Module, filename="") -> ray.ObjectRef:
+    if not enable_ray_alternative.active:
         # Store object in ray object store
         ref = ray.put(extract_tensors(model))
     else:
         # Store object directly on disk
-
         cachefile = get_model_cache_filename(filename)
-        if os.path.exists(cachefile):
-            # Don't store if it already exists
+        if have_model_cache(cachefile):
             return cachefile
         # Create cache directory if it doesn't already exist
         if not os.path.isdir(MODEL_CACHE_DIR):

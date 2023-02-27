@@ -180,16 +180,20 @@ class CompVisModelManager(BaseModelManager):
         logger.debug(f"Model path: {ckpt_path}")
 
         if voodoo and enable_ray_alternative.active and have_model_cache(ckpt_path):
+            logger.debug("Have up to date model cache, using that instead of ckpt model")
             model = get_model_cache_filename(ckpt_path)
         else:
+            logger.debug("Loading model from checkpoint")
             model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
             model = model.half() if half_precision else model
 
-        if voodoo:
+        if voodoo and isinstance(model, torch.nn.Module):
             logger.debug(f"Doing voodoo on {model_name}")
-            model = push_model_to_plasma(model, ckpt_path) if isinstance(model, torch.nn.Module) else model
-        else:
+            model = push_model_to_plasma(model, ckpt_path)
+        elif isinstance(model, torch.nn.Module):
+            logger.debug(f"Moving model data directly to device {device}")
             model = model.to(device)
+
         return {"model": model, "device": device, "half_precision": half_precision}
 
     def check_model_available(self, model_name):
