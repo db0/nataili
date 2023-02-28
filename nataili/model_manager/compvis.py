@@ -207,7 +207,7 @@ class CompVisModelManager(BaseModelManager):
                 model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
             logger.debug(f"Setting model.cond_stage_model.device to {device}")
             model.cond_stage_model.device = device
-            
+
         return {"model": model, "device": device, "half_precision": half_precision}
 
     def check_model_available(self, model_name):
