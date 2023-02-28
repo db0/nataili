@@ -114,8 +114,6 @@ class ImageEmbed:
         with torch.no_grad():
             preprocess_image = self.model["preprocess"](pil_image).unsqueeze(0).to(self.model["device"])
         image_features = self.model["model"].encode_image(preprocess_image).float()
-        image_features /= image_features.norm(dim=-1, keepdim=True)
-        image_embed_array = image_features.cpu().detach().numpy()
-        self._save(image_embed_array, image_hash)
+        self._save(image_features, image_hash)
         self.cache.add_sqlite_row(file=filename, hash=file_hash, pil_hash=image_hash)
         return image_hash

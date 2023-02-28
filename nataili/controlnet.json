@@ -5,6 +5,8 @@
 		"description": "control_canny",
 		"version": "0.1.0",
 		"style": "control_canny",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -24,12 +26,14 @@
 		},
 		"available": false
 	},
-    "control_depth": {
+	"control_depth": {
 		"name": "control_depth",
 		"type": "control_depth",
 		"description": "control_depth",
 		"version": "0.1.0",
 		"style": "control_depth",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -49,12 +53,14 @@
 		},
 		"available": false
 	},
-    "control_hed": {
+	"control_hed": {
 		"name": "control_hed",
 		"type": "control_hed",
 		"description": "control_hed",
 		"version": "0.1.0",
 		"style": "control_hed",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -74,12 +80,14 @@
 		},
 		"available": false
 	},
-    "control_mlsd": {
-		"name": "control_mlsd",
-		"type": "control_mlsd",
-		"description": "control_mlsd",
+	"control_hough": {
+		"name": "control_hough",
+		"type": "control_hough",
+		"description": "control_hough",
 		"version": "0.1.0",
-		"style": "control_mlsd",
+		"style": "control_hough",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -99,12 +107,41 @@
 		},
 		"available": false
 	},
-    "control_normal": {
+	"control_mlsd": {
+		"name": "control_mlsd",
+		"type": "control_mlsd",
+		"description": "control_mlsd",
+		"version": "0.1.0",
+		"style": "control_mlsd",
+		"nsfw": false,
+		"download_all": true,
+		"config": {
+			"files": [
+				{
+					"path": "control_mlsd_fp16.safetensors"
+				},
+				{
+					"path": "cldm_v15.yaml"
+				}
+			],
+			"download": [
+				{
+					"file_name": "control_mlsd_fp16.safetensors",
+					"file_path": "",
+					"file_url": "https://huggingface.co/kohya-ss/ControlNet-diff-modules/resolve/main/diff_control_sd15_mlsd_fp16.safetensors"
+				}
+			]
+		},
+		"available": false
+	},
+	"control_normal": {
 		"name": "control_normal",
 		"type": "control_normal",
 		"description": "control_normal",
 		"version": "0.1.0",
 		"style": "control_normal",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -124,12 +161,14 @@
 		},
 		"available": false
 	},
-    "control_openpose": {
+	"control_openpose": {
 		"name": "control_openpose",
 		"type": "control_openpose",
 		"description": "control_openpose",
 		"version": "0.1.0",
 		"style": "control_openpose",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -149,12 +188,14 @@
 		},
 		"available": false
 	},
-    "control_scribble": {
-		"name": "control_scribble",
-		"type": "control_scribble",
-		"description": "control_scribble",
+	"control_fakescribbles": {
+		"name": "control_fakescribbles",
+		"type": "control_fakescribbles",
+		"description": "control_fakescribbles",
 		"version": "0.1.0",
-		"style": "control_scribble",
+		"style": "control_fakescribbles",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{
@@ -174,12 +215,41 @@
 		},
 		"available": false
 	},
-    "control_seg": {
+	"control_scribble": {
+		"name": "control_scribble",
+		"type": "control_scribble",
+		"description": "control_scribble",
+		"version": "0.1.0",
+		"style": "control_scribble",
+		"nsfw": false,
+		"download_all": true,
+		"config": {
+			"files": [
+				{
+					"path": "control_scribble_fp16.safetensors"
+				},
+				{
+					"path": "cldm_v15.yaml"
+				}
+			],
+			"download": [
+				{
+					"file_name": "control_scribble_fp16.safetensors",
+					"file_path": "",
+					"file_url": "https://huggingface.co/kohya-ss/ControlNet-diff-modules/resolve/main/diff_control_sd15_scribble_fp16.safetensors"
+				}
+			]
+		},
+		"available": false
+	},
+	"control_seg": {
 		"name": "control_seg",
 		"type": "control_seg",
 		"description": "control_seg",
 		"version": "0.1.0",
 		"style": "control_seg",
+		"nsfw": false,
+		"download_all": true,
 		"config": {
 			"files": [
 				{

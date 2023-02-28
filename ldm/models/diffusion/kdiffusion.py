@@ -6,6 +6,7 @@ import warnings
 from nataili import disable_progress
 from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 from nataili.util.cast import autocast_cuda
+from nataili.util.logger import logger
 
 warnings.filterwarnings("ignore")
 
@@ -35,6 +36,7 @@ class KDiffusionSampler:
         sigma_override: dict = None,
         extra_args=None,
     ):
+        logger.debug(f"model.device: {self.model.device}")
         x0, z_mask = init_data
         if sigma_override:
             if "min" not in sigma_override:
@@ -84,6 +86,12 @@ class KDiffusionSampler:
                 "x0": x0,
                 "xi": xi,
             }
+        extra_args["cond"] = extra_args["cond"].to(self.model.device)
+        extra_args["uncond"] = extra_args["uncond"].to(self.model.device)
+        if extra_args["mask"] is not None:
+            extra_args["mask"] = extra_args["mask"].to(self.model.device)
+        extra_args["x0"] = extra_args["x0"].to(self.model.device)
+        extra_args["xi"] = extra_args["xi"].to(self.model.device)
         sigmas = sigmas[S - t_enc - 1 :]
 
         samples_ddim = None
@@ -132,6 +140,7 @@ class KDiffusionSampler:
         sigma_override: dict = None,
         extra_args=None,
     ):
+        logger.debug(f"model.device: {self.model.device}")
         if sigma_override:
             if "min" not in sigma_override:
                 raise ValueError("sigma_override must have a 'min' key")
@@ -174,7 +183,11 @@ class KDiffusionSampler:
                 "uncond": unconditional_conditioning,
                 "cond_scale": unconditional_guidance_scale,
             }
-
+            extra_args["cond"] = extra_args["cond"].to(self.model.device)
+            extra_args["uncond"] = extra_args["uncond"].to(self.model.device)
+        else:
+            # pix2pix, assume it is correct
+            pass
         samples_ddim = None
         if self.schedule == "dpm_fast":
             samples_ddim = K.sampling.__dict__[f"sample_{self.schedule}"](
