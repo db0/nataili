@@ -54,7 +54,7 @@ html_string = ""
 
 
 for file in os.listdir(directory):
-    results = interrogator(file, directory, word_list, similarity=True)
+    results = interrogator(filename=file, directory=directory, text_array=word_list, similarity=True)
     results = results['default']
     html_string += f"""
     <h1>{file}</h1>

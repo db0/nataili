@@ -9,13 +9,13 @@ from nataili.util.logger import logger, set_logger_verbosity
 
 
 set_logger_verbosity(5)
-init_image = Image.open(
-    "./test_images/00726-2641044396_cute_girl_holding_a_giant_NVIDIA_gtx_1080ti_GPU_graphics_card,_Anime_Blu-Ray_boxart,_super_high_detail,_pixiv_trending.png"
+init_image = Image.open(#daafaafarqrwrq.png
+    "./test_images/controlnet/openpose.png"
 ).convert("RGB")
-cnmm = ControlNetModelManager()
+cnmm = ControlNetModelManager(download_reference=False)
 mm = CompVisModelManager()
 
-model = "Deliberate"
+model = "Anything Diffusion"
 
 mm.load(model)
 
@@ -25,7 +25,7 @@ output_dir = f"./test_output/{str(uuid.uuid4())}"
 prompt = "anime girl ### weird mouth,weird teeth,incorrect anatomy, bad anatomy, ugly, odd, hideous, unsightly, extra limbs, poorly drawn, poorly drawn face, bad drawing, sketch, disfigured, cropped, out of frame,fully clothed,sad,agony,pain,cut off,trimmed,headpiece, head necklace,out of frame, malformed,hideous face, too many limbs, missing fingers, too many fingers, text, bad drawing, sketch, incorrect anatomy, hideous, unsightly, extra limbs, poorly drawn, poorly drawn face, disfigured, cropped"
 
 
-control_types = ["canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"]
+control_types = ["openpose"]
 
 for control_type in control_types:
     logger.info(f"Testing control_type='{control_type}'")
@@ -41,5 +41,6 @@ for control_type in control_types:
         prompt,
         init_img=init_image,
         control_type=control_type,
+        init_as_control=True,
         ddim_steps=20,
     )

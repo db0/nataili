@@ -32,7 +32,7 @@ from nataili.util.logger import logger
 warnings.filterwarnings("ignore")
 
 if enable_local_ray_temp.active:
-    ray_temp_dir = os.path.abspath("./ray")
+    ray_temp_dir = os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
     shutil.rmtree(ray_temp_dir, ignore_errors=True)
     os.makedirs(ray_temp_dir, exist_ok=True)
     ray.init(_temp_dir=ray_temp_dir)

@@ -442,30 +442,3 @@ class SpatialTransformer(nn.Module):
         if not self.use_linear:
             x = self.proj_out(x)
         return x + x_in
-
-
-class MemoryEfficientCrossAttention(nn.Module):
-    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.0):
-        super().__init__()
-        inner_dim = dim_head * heads
-        context_dim = default(context_dim, query_dim)
-
-        self.heads = heads
-        self.dim_head = dim_head
-
-        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
-        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
-        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
-
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
-        self.attention_op: Optional[Any] = None
-
-    def forward(self, x, context=None):
-        q = self.to_q(x)
-        context = default(context, x)
-        k, v = self.to_k(context), self.to_v(context)
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b n h d', h=self.heads).contiguous(), (q, k, v))
-        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
-        out = rearrange(out, 'b n h d -> b n (h d)', h=self.heads)
-
-        return self.to_out(out)

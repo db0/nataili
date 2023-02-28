@@ -178,12 +178,27 @@ class CompVisModelManager(BaseModelManager):
         logger.debug(f"Loading model {model_name} on {device}")
         logger.debug(f"Model path: {ckpt_path}")
         model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
-        model = model.half() if half_precision else model
+        if half_precision:
+            logger.debug("Converting model to half precision")
+            model = model.half()
+            logger.debug("Converting model.cond_stage_model.transformer to half precision")
+            if "stable diffusion 2" in self.models[model_name]["baseline"]:
+                model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
+            else:
+                model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
         if voodoo:
             logger.debug(f"Doing voodoo on {model_name}")
             model = push_model_to_plasma(model) if isinstance(model, torch.nn.Module) else model
         else:
+            logger.debug(f"Sending model to {device}")
             model = model.to(device)
+            logger.debug(f"Sending model.cond_stage_model.transformer to {device}")
+            if "stable diffusion 2" in self.models[model_name]["baseline"]:
+                model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.to(device)
+            else:
+                model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
+            logger.debug(f"Setting model.cond_stage_model.device to {device}")
+            model.cond_stage_model.device = device
         return {"model": model, "device": device, "half_precision": half_precision}
 
     def check_model_available(self, model_name):

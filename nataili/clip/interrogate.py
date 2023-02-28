@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import hashlib
+import os
 from typing import Dict, List, Union
 
 import numpy as np
@@ -209,6 +210,9 @@ class Interrogator:
             return
         if image is not None and filename is not None:
             logger.error("Only one of image or filename must be set")
+            return
+        if os.path.isdir(f"{directory}/{filename}"):
+            logger.error("Filename must be a file, not a directory")
             return
         if not similarity and not rank:
             logger.error("Must specify similarity or rank")
