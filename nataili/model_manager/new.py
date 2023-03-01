@@ -33,7 +33,7 @@ class NewModelManager(BaseModelManager):
         self.models_db_name = "new"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (
-            f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
+            f"https://raw.githubusercontent.com/db0/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
         )
         self.init()
 

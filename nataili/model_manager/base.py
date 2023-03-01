@@ -55,7 +55,7 @@ class BaseModelManager:
         self.cuda_available = torch.cuda.is_available()
         self.cuda_devices, self.recommended_gpu = self.get_cuda_devices()
         self.remote_db = (
-            f"https://raw.githubusercontent.com/Sygil-Dev/nataili-model-reference/main/{self.models_db_name}.json"
+            f"https://raw.githubusercontent.com/db0/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
         )
         self.download_reference = download_reference
 
