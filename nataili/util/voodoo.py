@@ -17,7 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import contextlib
 import copy
+import glob
 import os
+import pickle
 import shutil
 import warnings
 from typing import Dict, List, Tuple, TypeVar
@@ -25,15 +27,21 @@ from typing import Dict, List, Tuple, TypeVar
 import ray
 import torch
 
-from nataili import enable_local_ray_temp
+from nataili import enable_local_ray_temp, enable_ray_alternative
 from nataili.aitemplate import Model
 from nataili.util.logger import logger
 
 warnings.filterwarnings("ignore")
 
+
+MODEL_CACHE_DIR = os.path.join(os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray")), "model-cache")
+
+
 if enable_local_ray_temp.active:
     ray_temp_dir = os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
-    shutil.rmtree(ray_temp_dir, ignore_errors=True)
+    session_dirs = glob.glob(os.path.join(ray_temp_dir, "session_*"))
+    for adir in session_dirs:
+        shutil.rmtree(adir, ignore_errors=True)
     os.makedirs(ray_temp_dir, exist_ok=True)
     ray.init(_temp_dir=ray_temp_dir)
     logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
@@ -75,17 +83,53 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
             module.register_buffer(name, torch.as_tensor(array, device=device))
 
 
+def get_model_cache_filename(model_filename):
+    return os.path.join(MODEL_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
+
+
+def have_model_cache(model_filename):
+    cache_file = get_model_cache_filename(model_filename)
+    if os.path.exists(cache_file):
+        # We have a cache file but only consider it valid if it's up to date
+        model_timestamp = os.path.getmtime(model_filename)
+        cache_timestamp = os.path.getmtime(cache_file)
+        if model_timestamp <= cache_timestamp:
+            return True
+    return False
+
+
 @contextlib.contextmanager
 def load_from_plasma(ref, device="cuda"):
-    skeleton, weights = ray.get(ref)
+    if not enable_ray_alternative.active:
+        # Load object from ray object store
+        skeleton, weights = ray.get(ref)
+    else:
+        # Load object from our persistent store
+        with open(ref, "rb") as cache:
+            skeleton, weights = pickle.load(cache)
     replace_tensors(skeleton, weights, device=device)
     skeleton.eval().to(device, memory_format=torch.channels_last)
     yield skeleton
     torch.cuda.empty_cache()
 
 
-def push_model_to_plasma(model: torch.nn.Module) -> ray.ObjectRef:
-    ref = ray.put(extract_tensors(model))
+def push_model_to_plasma(model: torch.nn.Module, filename="") -> ray.ObjectRef:
+    if not enable_ray_alternative.active:
+        # Store object in ray object store
+        ref = ray.put(extract_tensors(model))
+    else:
+        # Store object directly on disk
+        cachefile = get_model_cache_filename(filename)
+        if have_model_cache(cachefile):
+            return cachefile
+        # Create cache directory if it doesn't already exist
+        if not os.path.isdir(MODEL_CACHE_DIR):
+            os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+        # Serialise our object
+        with open(cachefile, "wb") as cache:
+            pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
+        ref = cachefile
+
     return ref
 
 

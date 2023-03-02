@@ -28,10 +28,11 @@ from torch import nn
 
 import ldm.modules.encoders.modules
 from ldm.util import instantiate_from_config
+from nataili import enable_ray_alternative
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.util.logger import logger
-from nataili.util.voodoo import push_model_to_plasma
+from nataili.util.voodoo import get_model_cache_filename, have_model_cache, push_model_to_plasma
 
 
 class CompVisModelManager(BaseModelManager):
@@ -177,20 +178,27 @@ class CompVisModelManager(BaseModelManager):
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         logger.debug(f"Loading model {model_name} on {device}")
         logger.debug(f"Model path: {ckpt_path}")
-        model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
-        if half_precision:
-            logger.debug("Converting model to half precision")
-            model = model.half()
-            logger.debug("Converting model.cond_stage_model.transformer to half precision")
-            if "stable diffusion 2" in self.models[model_name]["baseline"]:
-                model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
-            else:
-                model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
-        if voodoo:
-            logger.debug(f"Doing voodoo on {model_name}")
-            model = push_model_to_plasma(model) if isinstance(model, torch.nn.Module) else model
+
+        if voodoo and enable_ray_alternative.active and have_model_cache(ckpt_path):
+            logger.debug("Have up to date model cache, using that instead of ckpt model")
+            model = get_model_cache_filename(ckpt_path)
         else:
-            logger.debug(f"Sending model to {device}")
+            logger.debug("Loading model from checkpoint")
+            model = self.load_model_from_config(model_path=ckpt_path, config_path=config_path)
+            if half_precision:
+                logger.debug("Converting model to half precision")
+                model = model.half()
+                logger.debug("Converting model.cond_stage_model.transformer to half precision")
+                if "stable diffusion 2" in self.models[model_name]["baseline"]:
+                    model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
+                else:
+                    model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
+
+        if voodoo and isinstance(model, torch.nn.Module):
+            logger.debug(f"Doing voodoo on {model_name}")
+            model = push_model_to_plasma(model, ckpt_path)
+        elif isinstance(model, torch.nn.Module):
+            logger.debug(f"Moving model data directly to device {device}")
             model = model.to(device)
             logger.debug(f"Sending model.cond_stage_model.transformer to {device}")
             if "stable diffusion 2" in self.models[model_name]["baseline"]:
@@ -199,6 +207,7 @@ class CompVisModelManager(BaseModelManager):
                 model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
             logger.debug(f"Setting model.cond_stage_model.device to {device}")
             model.cond_stage_model.device = device
+
         return {"model": model, "device": device, "half_precision": half_precision}
 
     def check_model_available(self, model_name):
