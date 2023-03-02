@@ -30,7 +30,7 @@ from ldm2.models.autoencoder import IdentityFirstStage, AutoencoderKL
 from ldm2.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
 from ldm2.models.diffusion.ddim import DDIMSampler
 from nataili import disable_progress
-
+from nataili.util.logger import logger
 
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
@@ -85,7 +85,7 @@ class DDPM(pl.LightningModule):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
         self.parameterization = parameterization
-        print(f"{self.__class__.__name__}: Running in {self.parameterization}-prediction mode")
+        logger.debug(f"{self.__class__.__name__}: Running in {self.parameterization}-prediction mode")
         self.cond_stage_model = None
         self.clip_denoised = clip_denoised
         self.log_every_t = log_every_t
