@@ -3,6 +3,8 @@ import torch
 
 from .dpm_solver import NoiseScheduleVP, model_wrapper, DPM_Solver
 
+from nataili.util.logger import logger
+
 
 MODEL_TYPES = {
     "eps": "noise",
@@ -61,7 +63,7 @@ class DPMSolverSampler(object):
         C, H, W = shape
         size = (batch_size, C, H, W)
 
-        print(f'Data shape for DPM-Solver sampling is {size}, sampling steps {S}')
+        logger.debug(f'Data shape for DPM-Solver sampling is {size}, sampling steps {S}')
 
         device = self.model.betas.device
         if x_T is None:

@@ -11,6 +11,8 @@ import torch
 from einops import rearrange
 from PIL import Image, ImageDraw, ImageFont
 
+from nataili.util.logger import logger
+
 
 def log_txt_as_img(wh, xc, size=10):
     # wh a tuple of (width, height)
@@ -69,7 +71,7 @@ def mean_flat(tensor):
 def count_params(model, verbose=False):
     total_params = sum(p.numel() for p in model.parameters())
     if verbose:
-        print(f"{model.__class__.__name__} has {total_params * 1.e-6:.2f} M params.")
+        logger.debug(f"{model.__class__.__name__} has {total_params * 1.e-6:.2f} M params.")
     return total_params
 
 
