@@ -312,9 +312,13 @@ class BaseModelManager:
             logger.debug(f"Expected: {file_details['md5sum']}")
             if file_details["md5sum"] != md5_file_hash:
                 return False
+            else:
+                return True
 
-        # If no hashes available, return False
-        return False
+        # If no hashes available, return True for now
+        # THIS IS A SECURITY RISK, EVENTUALLY WE SHOULD RETURN FALSE
+        # But currently not all models specify hashes
+        return True
 
     def check_file_available(self, file_path):
         """
