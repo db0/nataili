@@ -54,7 +54,8 @@ class Canny(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = resize_image(HWC3(image), resolution)
             H, W, C = image.shape
@@ -76,7 +77,8 @@ class HED(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = HWC3(image)
             detected_map = self.model(resize_image(image, detect_resolution))
@@ -100,7 +102,8 @@ class FakeScribbles(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = HWC3(image)
             detected_map = self.model(resize_image(image, detect_resolution))
@@ -137,7 +140,8 @@ class Hough(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = HWC3(image)
             detected_map = self.model(resize_image(image, detect_resolution), value_threshold, distance_threshold)
@@ -231,7 +235,8 @@ class Openpose(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = HWC3(image)
             detected_map, _ = self.model(resize_image(image, detect_resolution), has_hand)
@@ -255,14 +260,15 @@ class Seg(Annotation):
         image: np.ndarray = np.asarray(image)
         if self.image_is_control:
             detected_map = HWC3(image)
-            H, W, C = detected_map.shape
+            _image = resize_image(image, resolution)
+            H, W, C = _image.shape
         else:
             image = HWC3(image)
             detected_map = self.model(resize_image(image, detect_resolution))
             image = resize_image(image, resolution)
             H, W, C = image.shape
-            detected_map = cv2.resize(detected_map, (W, H), interpolation=cv2.INTER_NEAREST)
 
+        detected_map = cv2.resize(detected_map, (W, H), interpolation=cv2.INTER_NEAREST)
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
