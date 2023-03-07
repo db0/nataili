@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import re
+import time
 from contextlib import nullcontext
 from typing import List, Literal, Optional, Tuple, Union
 
@@ -416,6 +417,7 @@ class CompVis:
                 karras=False,
                 sigma_override: dict = None,
             ):
+                start_sampling = time.time()
                 nonlocal sampler
                 t_enc_steps = t_enc
                 if hires_fix:
@@ -463,6 +465,10 @@ class CompVis:
                         z_mask=z_mask,
                         x0=x0,
                     )
+                its = round(ddim_steps / (time.time() - start_sampling), 2)
+                logger.info(
+                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                )
                 return samples_ddim
 
             def sample(
@@ -476,6 +482,7 @@ class CompVis:
                 karras=False,
                 sigma_override: dict = None,
             ):
+                start_sampling = time.time()
                 if sampler_name == "dpmsolver":
                     samples_ddim, _ = sampler.sample(
                         ddim_steps,
@@ -498,6 +505,10 @@ class CompVis:
                         karras=karras,
                         sigma_override=sigma_override,
                     )
+                its = round(ddim_steps / (time.time() - start_sampling), 2)
+                logger.info(
+                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                )
                 return samples_ddim
 
             def create_sampler_by_sampler_name(model):
