@@ -17,8 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import re
-from contextlib import nullcontext
 import time
+from contextlib import nullcontext
 from typing import List, Literal, Optional, Tuple, Union
 
 import einops
@@ -466,7 +466,9 @@ class CompVis:
                         x0=x0,
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
-                logger.info(f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s")
+                logger.info(
+                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                )
                 return samples_ddim
 
             def sample(
@@ -504,7 +506,9 @@ class CompVis:
                         sigma_override=sigma_override,
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
-                logger.info(f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s")
+                logger.info(
+                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                )
                 return samples_ddim
 
             def create_sampler_by_sampler_name(model):
