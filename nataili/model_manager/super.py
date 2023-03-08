@@ -275,6 +275,9 @@ class ModelManager:
         if self.controlnet is not None and model_name in self.controlnet.models:
             self.controlnet.unload_model(model_name)
             del self.loaded_models[model_name]
+        # Also remove from super() model list
+        if model_name in self.loaded_models:
+            del self.loaded_models[model_name]
 
     def get_loaded_models_names(self, string=False):
         """
