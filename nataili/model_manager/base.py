@@ -206,7 +206,8 @@ class BaseModelManager:
                 return False
         return True
 
-    def get_file_hash(self, file_name):
+    @staticmethod
+    def get_file_md5sum_hash(file_name):
         # Bail out if the source file doesn't exist
         if not os.path.isfile(file_name):
             return
@@ -245,25 +246,79 @@ class BaseModelManager:
 
         return md5_hash
 
+    @staticmethod
+    def get_file_sha256_hash(file_name):
+        if not os.path.isfile(file_name):
+            raise FileNotFoundError("No file {}".format(file_name))
+
+        # Check if we have a cached sha256 hash for the source file
+        # and use that unless our source file is newer than our hash
+        sha256_file = f"{os.path.splitext(file_name)[0]}.sha256"
+        source_timestamp = os.path.getmtime(file_name)
+        if os.path.isfile(sha256_file):
+            hash_timestamp = os.path.getmtime(sha256_file)
+        else:
+            hash_timestamp = 0
+        if hash_timestamp > source_timestamp:
+            # Use our cached hash
+            with open(sha256_file, "rt") as handle:
+                sha256_hash = handle.read().split()[0]
+            return sha256_hash
+
+        # Calculate the hash of the source file
+        with open(file_name, "rb") as file_to_check:
+            file_hash = hashlib.sha256()
+            while True:
+                chunk = file_to_check.read(8192)
+                if not chunk:
+                    break
+                file_hash.update(chunk)
+        sha256_hash = file_hash.hexdigest()
+
+        # Cache this sha256 hash we just calculated. Use sha256sum format files
+        # so we can also use OS tools to manipulate these md5 files
+        try:
+            with open(sha256_file, "wt") as handle:
+                handle.write(f"{sha256_hash} *{os.path.basename(sha256_file)}")
+        except (OSError, PermissionError):
+            logger.debug("Could not write to sha256sum file, ignoring")
+
+        return sha256_hash
+
     def validate_file(self, file_details):
         """
         :param file_details: A single file from the model's files list
         Checks if the file exists and if the checksum is correct
         Returns True if the file is valid, False otherwise
         """
-        if "md5sum" in file_details:
-            full_path = f"{self.path}/{file_details['path']}"
-            logger.debug(f"Getting md5sum of {full_path}")
-            file_hash = self.get_file_hash(full_path)
-            logger.debug(f"md5sum: {file_hash}")
-            logger.debug(f"Expected: {file_details['md5sum']}")
-            if file_details["md5sum"] != file_hash:
+        full_path = f"{self.path}/{file_details['path']}"
+
+        # Default to sha256 hashes
+        if "sha256sum" in file_details:
+            logger.debug(f"Getting sha256sum of {full_path}")
+            sha256_file_hash = self.get_file_sha256_hash(full_path)
+            logger.debug(f"sha256sum: {sha256_file_hash}")
+            logger.debug(f"Expected: {file_details['sha256sum']}")
+            if file_details["sha256sum"] != sha256_file_hash:
                 return False
             else:
                 return True
-        else:
-            logger.debug("No md5sum provided")
-            return True
+
+        # If sha256 is not available, fall back to md5
+        if "md5sum" in file_details:
+            logger.debug(f"Getting md5sum of {full_path}")
+            md5_file_hash = self.get_file_md5sum_hash(full_path)
+            logger.debug(f"md5sum: {md5_file_hash}")
+            logger.debug(f"Expected: {file_details['md5sum']}")
+            if file_details["md5sum"] != md5_file_hash:
+                return False
+            else:
+                return True
+
+        # If no hashes available, return True for now
+        # THIS IS A SECURITY RISK, EVENTUALLY WE SHOULD RETURN FALSE
+        # But currently not all models specify hashes
+        return True
 
     def check_file_available(self, file_path):
         """
