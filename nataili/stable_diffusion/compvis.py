@@ -198,14 +198,9 @@ class CompVis:
         ] = None,
         init_as_control: bool = False,
     ):
-        try:
-            model_context = (
-                load_from_plasma(self.model["model"], self.model["device"])
-                if not self.disable_voodoo
-                else nullcontext()
-            )
-        except InvalidModelCacheException:
-            raise
+        model_context = (
+            load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
+        )
         with model_context as model:
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
