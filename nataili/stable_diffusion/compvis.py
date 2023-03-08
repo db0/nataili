@@ -200,7 +200,9 @@ class CompVis:
     ):
         try:
             model_context = (
-                load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
+                load_from_plasma(self.model["model"], self.model["device"])
+                if not self.disable_voodoo
+                else nullcontext()
             )
         except InvalidModelCacheException:
             raise

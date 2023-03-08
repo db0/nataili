@@ -11,5 +11,6 @@ enable_ray_alternative = Switch()
 class InvalidModelException(Exception):
     pass
 
+
 class InvalidModelCacheException(InvalidModelException):
     pass

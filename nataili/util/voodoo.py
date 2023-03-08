@@ -27,7 +27,7 @@ from typing import Dict, List, Tuple, TypeVar
 import ray
 import torch
 
-from nataili import enable_local_ray_temp, enable_ray_alternative, InvalidModelCacheException
+from nataili import InvalidModelCacheException, enable_local_ray_temp, enable_ray_alternative
 from nataili.aitemplate import Model
 from nataili.util.logger import logger
 
