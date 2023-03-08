@@ -27,7 +27,7 @@ from typing import Dict, List, Tuple, TypeVar
 import ray
 import torch
 
-from nataili import enable_local_ray_temp, enable_ray_alternative
+from nataili import enable_local_ray_temp, enable_ray_alternative, InvalidModelCacheException
 from nataili.aitemplate import Model
 from nataili.util.logger import logger
 
@@ -104,9 +104,17 @@ def load_from_plasma(ref, device="cuda"):
         # Load object from ray object store
         skeleton, weights = ray.get(ref)
     else:
-        # Load object from our persistent store
-        with open(ref, "rb") as cache:
-            skeleton, weights = pickle.load(cache)
+        try:
+            # Load object from our persistent store
+            with open(ref, "rb") as cache:
+                skeleton, weights = pickle.load(cache)
+        except (pickle.PickleError, EOFError):
+            # Most likely corrupt cache file, remove the file
+            try:
+                os.remove(ref)
+            except OSError:
+                pass  # we tried
+            raise InvalidModelCacheException(f"Model .cache file {ref} was corrupt. It has been removed.")
     replace_tensors(skeleton, weights, device=device)
     skeleton.eval().to(device, memory_format=torch.channels_last)
     yield skeleton

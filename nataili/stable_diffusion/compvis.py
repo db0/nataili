@@ -42,6 +42,7 @@ from ldm.models.diffusion.ddpm import LatentDiffusion
 from ldm.models.diffusion.ddpm_edit import LatentDiffusion as LatentDiffusionPix2Pix
 from ldm.models.diffusion.kdiffusion import CFGMaskedDenoiser, KDiffusionSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from nataili import InvalidModelCacheException
 from nataili.model_manager.controlnet import ControlNetModelManager
 from nataili.stable_diffusion.annotation import (
     HED,
@@ -197,9 +198,12 @@ class CompVis:
         ] = None,
         init_as_control: bool = False,
     ):
-        model_context = (
-            load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
-        )
+        try:
+            model_context = (
+                load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
+            )
+        except InvalidModelCacheException:
+            raise
         with model_context as model:
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
