@@ -143,7 +143,7 @@ class FaceRestoreHelper(object):
             img = img[:, :, 0:3]
 
         self.input_img = img
-        self.is_gray = is_gray(img, threshold=5)
+        self.is_gray = is_gray(img, threshold=10)
         if self.is_gray:
             logger.debug("Grayscale input: True")
 
