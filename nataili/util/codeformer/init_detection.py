@@ -27,7 +27,7 @@ def init_detection_model(model_name, half=False, device="cuda", model_rootpath="
 def init_retinaface_model(model_name, half=False, device="cuda", model_rootpath=""):
     if model_name == "retinaface_resnet50":
         model = RetinaFace(network_name="resnet50", half=half)
-        model_url = "https://s3.eu-central-1.wasabisys.com/nextml-model-data/codeformer/weights/facelib/detection_Resnet50_Final.pth"
+        model_url = "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_Resnet50_Final.pth"
     elif model_name == "retinaface_mobile0.25":
         model = RetinaFace(network_name="mobile0.25", half=half)
         model_url = "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/detection_mobilenet0.25_Final.pth"
