@@ -97,6 +97,7 @@ class CodeFormer(torch.nn.Module):
             use_parse=True,
             device=device,
             model_rootpath=gfpgan_model_manager.path,  # GFPGAN uses the same FaceRestoreHelper models
+            source_facefixer="CodeFormer"
         )
 
     @property
@@ -130,7 +131,7 @@ class CodeFormer(torch.nn.Module):
         if has_aligned:
             # the input faces are already cropped and aligned
             img = cv2.resize(img, (512, 512), interpolation=cv2.INTER_LINEAR)
-            self.face_helper.is_gray = is_gray(img, threshold=5)
+            self.face_helper.is_gray = is_gray(img, threshold=10)
             self.face_helper.cropped_faces = [img]
         else:
             self.face_helper.read_image(img)
