@@ -311,7 +311,6 @@ class LoRA:
         return require_grad_params, names
 
     def extract_lora_ups_down(self, model, target_replace_module=DEFAULT_TARGET_REPLACE):
-
         loras = []
 
         for _m, _n, _child_module in self._find_modules_v2(
@@ -327,7 +326,6 @@ class LoRA:
         return loras
 
     def extract_lora_as_tensor(self, model, target_replace_module=DEFAULT_TARGET_REPLACE, as_fp16=True):
-
         loras = []
 
         for _m, _n, _child_module in self._find_modules_v2(
@@ -549,13 +547,11 @@ class LoRA:
         return self.parse_safeloras(safeloras), self.parse_safeloras_embeds(safeloras)
 
     def collapse_lora(self, model, alpha=1.0):
-
         for _module, name, _child_module in self._find_modules_v2(
             model,
             self.UNET_EXTENDED_TARGET_REPLACE | self.TEXT_ENCODER_EXTENDED_TARGET_REPLACE,
             search_class=[self.LoraInjectedLinear, self.LoraInjectedConv2d],
         ):
-
             if isinstance(_child_module, self.LoraInjectedLinear):
                 print("Collapsing Lin Lora in", name)
 
@@ -629,7 +625,6 @@ class LoRA:
             target_replace_module,
             search_class=[nn.Linear, self.LoraInjectedLinear, nn.Conv2d, self.LoraInjectedConv2d],
         ):
-
             if (_child_module.__class__ == nn.Linear) or (_child_module.__class__ == self.LoraInjectedLinear):
                 if len(loras[0].shape) != 2:
                     continue
@@ -948,7 +943,6 @@ class LoRA:
 
             # save text encoder
             if save_lora:
-
                 self.save_lora_weight(unet, save_path, target_replace_module=target_replace_module_unet)
                 print("Unet saved to ", save_path)
 
@@ -966,7 +960,6 @@ class LoRA:
             embeds = {}
 
             if save_lora:
-
                 loras["unet"] = (unet, target_replace_module_unet)
                 loras["text_encoder"] = (text_encoder, target_replace_module_text)
 

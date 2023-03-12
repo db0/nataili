@@ -69,7 +69,6 @@ def get_reference_facial_points(
         tmp_crop_size += size_diff
 
     if output_size and output_size[0] == tmp_crop_size[0] and output_size[1] == tmp_crop_size[1]:
-
         return tmp_5pts
 
     if inner_padding_factor == 0 and outer_padding == (0, 0):

@@ -97,7 +97,7 @@ class CodeFormer(torch.nn.Module):
             use_parse=True,
             device=device,
             model_rootpath=gfpgan_model_manager.path,  # GFPGAN uses the same FaceRestoreHelper models
-            source_facefixer="CodeFormer"
+            source_facefixer="CodeFormer",
         )
 
     @property
