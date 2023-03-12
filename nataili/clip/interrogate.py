@@ -146,7 +146,6 @@ class Interrogator:
             logger.debug(f"Loading {key} embeds")
             self.load(key, text_array, individual=True, device=device)
         logger.debug(f"{len(text_array)} text_array: {text_array}")
-        logger.debug(f"{len(self.embed_lists[key])} embed_lists[key]: {self.embed_lists[key]}")
         similarity = {}
         for text in text_array:
             text_features = self.embed_lists[key][text].to(device)
