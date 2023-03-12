@@ -36,7 +36,8 @@ class codeformers(PostProcessor):
         :param kwargs: strength
         :return: PIL Image
         """
-        output = self.model["model"](img)
+        strength = kwargs.get("strength", 0.5)
+        output = self.model["model"](img, fidelity_weight=strength)
         output_array = np.array(output)
         output_image = Image.fromarray(output_array)
         return output_image
