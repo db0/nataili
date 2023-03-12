@@ -351,12 +351,7 @@ class Model(object):
             inputs = self._dict_to_ordered_list(inputs, is_inputs=True)
         if isinstance(outputs, dict):
             outputs = self._dict_to_ordered_list(outputs, is_inputs=False)
-        (
-            c_inputs,
-            c_outputs,
-            c_stream,
-            c_output_shapes_out,
-        ) = self._prepare_run(
+        (c_inputs, c_outputs, c_stream, c_output_shapes_out,) = self._prepare_run(
             inputs,
             outputs,
             stream_ptr,
@@ -537,12 +532,7 @@ class Model(object):
             inputs = self._dict_to_ordered_list(inputs, is_inputs=True)
         if isinstance(outputs, dict):
             outputs = self._dict_to_ordered_list(outputs, is_inputs=False)
-        (
-            c_inputs,
-            c_outputs,
-            c_stream,
-            c_output_shapes_out,
-        ) = self._prepare_run(
+        (c_inputs, c_outputs, c_stream, c_output_shapes_out,) = self._prepare_run(
             inputs,
             outputs,
             stream_ptr,
