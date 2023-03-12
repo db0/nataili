@@ -94,6 +94,7 @@ class GFPGANer:
             use_parse=True,
             device=self.device,
             model_rootpath=cache_dir,
+            source_facefixer="GFPGAN",
         )
 
         if model_path.startswith("https://"):

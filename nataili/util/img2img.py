@@ -102,7 +102,6 @@ def _ifft2(data):
 
 
 def _get_gaussian_window(width, height, std=3.14, mode=0):
-
     window_scale_x = float(width / min(width, height))
     window_scale_y = float(height / min(width, height))
 

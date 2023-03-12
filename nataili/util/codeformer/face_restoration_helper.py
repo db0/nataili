@@ -66,6 +66,7 @@ class FaceRestoreHelper(object):
         use_parse=False,
         device=None,
         model_rootpath=None,
+        source_facefixer="CodeFormer",
     ):
         self.template_3points = template_3points  # improve robustness
         self.upscale_factor = int(upscale_factor)
@@ -113,6 +114,7 @@ class FaceRestoreHelper(object):
         self.cropped_faces = []
         self.restored_faces = []
         self.pad_input_imgs = []
+        self.source_facefixer = source_facefixer
 
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -143,13 +145,14 @@ class FaceRestoreHelper(object):
             img = img[:, :, 0:3]
 
         self.input_img = img
-        self.is_gray = is_gray(img, threshold=5)
-        if self.is_gray:
-            logger.debug("Grayscale input: True")
+        self.is_gray = is_gray(img, threshold=10)
+        if self.source_facefixer == "CodeFormer":
+            if self.is_gray:
+                logger.debug("Grayscale input: True")
 
-        if min(self.input_img.shape[:2]) < 512:
-            f = 512.0 / min(self.input_img.shape[:2])
-            self.input_img = cv2.resize(self.input_img, (0, 0), fx=f, fy=f, interpolation=cv2.INTER_LINEAR)
+            if min(self.input_img.shape[:2]) < 512:
+                f = 512.0 / min(self.input_img.shape[:2])
+                self.input_img = cv2.resize(self.input_img, (0, 0), fx=f, fy=f, interpolation=cv2.INTER_LINEAR)
 
     def get_face_landmarks_5(
         self,

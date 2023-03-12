@@ -19,9 +19,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nataili"
-version = "0.2.9013"
+version = "0.2.9014"
 authors = [
-    { name="hlky", email="goto@github.com" },
+    { name="rcnz", email="goto@github.com" },
 ]
 description = "Nataili: Multimodal AI Python Library"
 readme = "README.md"

@@ -26,7 +26,6 @@ from nataili.util.codeformer.facelib.detection.retinaface.retinaface_utils impor
 
 
 def generate_config(network_name):
-
     cfg_mnet = {
         "name": "mobilenet0.25",
         "min_sizes": [[16, 32], [64, 128], [256, 512]],
@@ -261,7 +260,6 @@ class RetinaFace(nn.Module):
         return np.concatenate((bounding_boxes, landmarks), axis=1)
 
     def __align_multi(self, image, boxes, landmarks, limit=None):
-
         if len(boxes) < 1:
             return [], []
 
@@ -279,7 +277,6 @@ class RetinaFace(nn.Module):
         return np.concatenate((boxes, landmarks), axis=1), faces
 
     def align_multi(self, img, conf_threshold=0.8, limit=None):
-
         rlt = self.detect_faces(img, conf_threshold=conf_threshold)
         boxes, landmarks = rlt[:, 0:5], rlt[:, 5:]
 
@@ -371,7 +368,6 @@ class RetinaFace(nn.Module):
         b_loc_and_conf = torch.cat((b_loc, b_conf.unsqueeze(-1)), dim=2).float()
 
         for pred, landm, inds in zip(b_loc_and_conf, b_landmarks, b_indice):
-
             # ignore low scores
             pred, landm = pred[inds, :], landm[inds, :]
             if pred.shape[0] == 0:
