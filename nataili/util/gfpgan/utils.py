@@ -109,7 +109,7 @@ class GFPGANer:
         self.gfpgan = self.gfpgan.to(self.device)
 
     @torch.no_grad()
-    def enhance(self, img, has_aligned=False, only_center_face=True, paste_back=True, weight=0.7):
+    def enhance(self, img, has_aligned=False, only_center_face=False, paste_back=True, weight=0.5):
         self.face_helper.clean_all()
 
         if has_aligned:  # the inputs are already aligned
