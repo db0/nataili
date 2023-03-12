@@ -146,8 +146,8 @@ class FaceRestoreHelper(object):
 
         self.input_img = img
         if self.source_facefixer == "CodeFormer":
-            self.is_gray = True if is_gray(img, threshold=10) else False
-            if self.is_gray:
+            is_grayscale = is_gray(img, threshold=10)
+            if is_grayscale:
                 logger.debug("Grayscale input: True")
 
             if min(self.input_img.shape[:2]) < 512:
