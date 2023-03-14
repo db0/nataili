@@ -90,14 +90,14 @@ class ControlNetModelManager(BaseModelManager):
         else:
             for key in keys:
                 p = sd15_with_control_state_dict[key]
-                key_name = f'control_model.{key}'
+                key_name = f'model.diffusion_model.{key.replace("control_model.", "")}'
                 if key in input_state_dict.keys():
                     # logger.info(f"merging {key_name} from input {key} from control")
                     p_new = p + input_state_dict[key_name].clone().cpu()
                 else:
                     # logger.info(f"directly copying {key_name} from control")
                     p_new = p
-                final_state_dict[key] = p_new
+                final_state_dict[f"control_model.{key}"] = p_new
         # remove key "lvlb_weights"
         if "lvlb_weights" in final_state_dict.keys():
             final_state_dict.pop("lvlb_weights")
