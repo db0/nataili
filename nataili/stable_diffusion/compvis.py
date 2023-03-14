@@ -650,18 +650,19 @@ class CompVis:
                             else:
                                 x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
                             init_data = init(model, init_img) if init_img else None
-                            low_vram(
-                                [
-                                    (model, self.model["device"]),
-                                    (
-                                        model.cond_stage_model.transformer
-                                        if hasattr(model.cond_stage_model, "transformer")
-                                        else model.cond_stage_model.model.transformer,
-                                        self.model["device"],
-                                    ),
-                                    (model.first_stage_model, "cpu"),
-                                ],
-                            )
+                            if sampler_name != "DDIM":
+                                low_vram(
+                                    [
+                                        (model, self.model["device"]),
+                                        (
+                                            model.cond_stage_model.transformer
+                                            if hasattr(model.cond_stage_model, "transformer")
+                                            else model.cond_stage_model.model.transformer,
+                                            "cpu",
+                                        ),
+                                        (model.first_stage_model, "cpu"),
+                                    ],
+                                )
                             if low_vram_mode():
                                 model.cond_stage_model.device = "cpu"
                             logger.debug(
