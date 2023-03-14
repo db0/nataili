@@ -194,8 +194,8 @@ class DDIMSampler(object):
                 c, unconditional_conditioning = fix_mismatched_tensors(
                     c, unconditional_conditioning, self.model
                 )
-            c.to(self.model["device"])
-            unconditional_conditioning.to(self.model["device"])
+            c.cuda()
+            unconditional_conditioning.cuda()
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
