@@ -834,6 +834,20 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
+                        low_vram(
+                            [
+                                (self.control_net_model, self.model["device"]),
+                                (self.control_net_model.control_model, self.model["device"]),
+                                (
+                                    model.cond_stage_model.transformer
+                                    if hasattr(model.cond_stage_model, "transformer")
+                                    else model.cond_stage_model.model.transformer,
+                                    "cpu",
+                                ),
+                                (self.control_net_model.first_stage_model, "cpu"),
+                            ],
+                            force=True,
+                        )
                         """
                         NOTE:
                         Use `self.control_net_model` instead of `model` for the control net
@@ -860,15 +874,6 @@ class CompVis:
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
                         self.control_net_model.control_scales = [1.0] * 13
-                        low_vram(
-                            [
-                                (self.control_net_model, self.model["device"]),
-                                (self.control_net_model.control_model, self.model["device"]),
-                                (self.control_net_model.cond_stage_model.transformer, "cpu"),
-                                (self.control_net_model.first_stage_model, "cpu"),
-                            ],
-                            force=True,
-                        )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
