@@ -207,7 +207,7 @@ class CompVis:
             if (
                 control_type is not None
                 and init_img is not None
-                and ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough", "fakescribbles"])
+                and ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
                 and self.model_name != "pix2pix"
             ):
                 sampler_name = "DDIM"

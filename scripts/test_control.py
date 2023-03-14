@@ -44,7 +44,7 @@ for control_type in control_types:
         ddim_steps=20,
     )
 
-control_types_v2 = ["canny", "hed", "depth",  "openpose", "scribble"]
+control_types_v2 = ["canny", "hed", "depth",  "openpose", "scribble", "fakescribbles"]
 mm.unload_model(model)
 
 model = "Illuminati Diffusion"
