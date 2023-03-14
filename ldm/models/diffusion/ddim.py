@@ -196,6 +196,9 @@ class DDIMSampler(object):
                 )
             c.cuda()
             unconditional_conditioning.cuda()
+            print("Device Locations")
+            print(torch.get_device(c))
+            print(torch.get_device(unconditional_conditioning))
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
