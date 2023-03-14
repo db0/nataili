@@ -1,6 +1,7 @@
 model:
   target: cldm.cldm.ControlLDM
   params:
+    parameterization: "v"
     linear_start: 0.00085
     linear_end: 0.0120
     num_timesteps_cond: 1

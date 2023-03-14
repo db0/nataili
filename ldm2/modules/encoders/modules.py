@@ -298,7 +298,6 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
 
     def forward(self, text, clip_skip=None):
         tokens = open_clip.tokenize(text)
-        print (f"Transformer current device = {self.device}")
         z = self.encode_with_transformer(tokens.to(self.device))
         return z
 
