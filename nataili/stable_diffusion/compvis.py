@@ -500,7 +500,7 @@ class CompVis:
                 sigma_override: dict = None,
             ):
                 start_sampling = time.time()
-                if sampler_name == "dpmsolver":
+                if sampler_name in ["dpmsolver", "DDIM"]:
                     samples_ddim, _ = sampler.sample(
                         ddim_steps,
                         batch_size,
