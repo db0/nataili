@@ -91,6 +91,9 @@ class ControlNetModelManager(BaseModelManager):
             final_state_dict.pop("lvlb_weights")
         logger.info("Finished merging control net state dict into target state dict")
         logger.info(f"Loading {full_name} state dict")
+        print(f"Input State Dict = {input_state_dict}")
+        print(f"SD15 State Dict = {sd15_with_control_state_dict}")
+        print(f"Final State Dict = {final_state_dict}")
         model.load_state_dict(final_state_dict, strict=True)
         logger.info(f"Loaded {full_name} state dict")
         if half_precision:
