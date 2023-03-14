@@ -533,9 +533,7 @@ class CompVis:
                     sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
                 ):  # TODO: check support for sd2.x
                     sampler = PLMSSampler(model)
-                elif (
-                    sampler_name == "DDIM" and "stable diffusion 2" not in self.model_baseline
-                ):  # TODO: check support for sd2.x
+                elif sampler_name == "DDIM":  
                     sampler = DDIMSampler(model)
                 elif sampler_name == "k_dpm_2_a":
                     sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
