@@ -311,7 +311,12 @@ class CompVis:
                     [
                         (self.control_net_model, "cpu"),
                         (self.control_net_model.control_model, "cpu"),
-                        (self.control_net_model.cond_stage_model.transformer, self.model["device"]),
+                        (
+                            model.cond_stage_model.transformer
+                            if hasattr(model.cond_stage_model, "transformer")
+                            else model.cond_stage_model.model.transformer,
+                            self.model["device"],
+                        ),
                         (self.control_net_model.first_stage_model, "cpu"),
                     ],
                     force=True,  # always move control net to gpu
