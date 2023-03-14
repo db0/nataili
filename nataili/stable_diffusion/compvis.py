@@ -205,7 +205,10 @@ class CompVis:
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
-                (("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"]) or ("stable diffusion 2" not in self.model_baseline))
+                (
+                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
+                    or ("stable diffusion 2" not in self.model_baseline)
+                )
                 and control_type is not None
                 and init_img is not None
                 and self.model_name != "pix2pix"
@@ -252,7 +255,9 @@ class CompVis:
                     result = Scribble()(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "fakescribbles":
-                    result = FakeScribbles(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
+                    result = FakeScribbles(init_as_control)(
+                        init_img, resolution=resolution, detect_resolution=resolution
+                    )
                     control = result["control"]
                 elif control_type == "hough":
                     result = Hough(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
@@ -535,7 +540,7 @@ class CompVis:
                     sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
                 ):  # TODO: check support for sd2.x
                     sampler = PLMSSampler(model)
-                elif sampler_name == "DDIM":  
+                elif sampler_name == "DDIM":
                     sampler = DDIMSampler(model)
                 elif sampler_name == "k_dpm_2_a":
                     sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
@@ -828,9 +833,7 @@ class CompVis:
                         f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                     )
                 else:
-                    logger.debug(
-                        f"[Low VRAM] controlnet start"
-                    )
+                    logger.debug("[Low VRAM] controlnet start")
                 with torch.no_grad():
                     for n in range(n_iter):
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
