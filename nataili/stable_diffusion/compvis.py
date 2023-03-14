@@ -834,14 +834,19 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
-                        # Force sd2 transformer to cpu before doing prompt weighting
+                        # Force all sd2 components to gpu before doing prompt weighting
                         if self.model_baseline == "stable diffusion 2":
                             low_vram(
                                 [
+                                    (self.control_net_model, self.model["device"]),
+                                    (self.control_net_model.control_model, self.model["device"]),
                                     (
-                                        model.cond_stage_model.model.transformer,
-                                        "cpu",
+                                        model.cond_stage_model.transformer
+                                        if hasattr(model.cond_stage_model, "transformer")
+                                        else model.cond_stage_model.model.transformer,
+                                        self.model["device"],
                                     ),
+                                    (self.control_net_model.first_stage_model, self.model["device"]),
                                 ],
                                 force=True,
                             )
