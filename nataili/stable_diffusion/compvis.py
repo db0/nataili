@@ -205,11 +205,11 @@ class CompVis:
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
-                (
-                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough", None])
+                control_type is not None
+                and (
+                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
                     or ("stable diffusion 2" not in self.model_baseline)
                 )
-                and control_type is not None
                 and init_img is not None
                 and self.model_name != "pix2pix"
             ):
