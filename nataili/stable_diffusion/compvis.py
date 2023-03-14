@@ -869,9 +869,6 @@ class CompVis:
                             ],
                             force=True,
                         )
-                        logger.debug(
-                            f"[Low VRAM] controlnet before sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
-                        )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
@@ -889,9 +886,6 @@ class CompVis:
                                 (self.control_net_model.first_stage_model, self.model["device"]),
                             ],
                             force=True,
-                        )
-                        logger.debug(
-                            f"[Low VRAM] controlnet after sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
 
             logger.debug(
