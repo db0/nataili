@@ -206,7 +206,7 @@ class CompVis:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
                 (
-                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
+                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough", None])
                     or ("stable diffusion 2" not in self.model_baseline)
                 )
                 and control_type is not None
