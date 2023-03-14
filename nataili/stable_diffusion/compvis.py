@@ -877,7 +877,7 @@ class CompVis:
                             )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
-                        self.control_net_model.control_scales = [denoising_strength * 2] * 13
+                        self.control_net_model.control_scales = [1.0] * (26 * denoising_strength)
                         low_vram(
                             [
                                 (self.control_net_model, self.model["device"]),
