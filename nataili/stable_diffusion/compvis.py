@@ -207,7 +207,7 @@ class CompVis:
             if (
                 control_type is not None
                 and init_img is not None
-                and "stable diffusion 2" not in self.model_baseline
+                and ("stable diffusion 2" in self.model_baseline and control_type not in ["mlsd", "hough", "fakescribbles"])
                 and self.model_name != "pix2pix"
             ):
                 sampler_name = "DDIM"
@@ -225,11 +225,15 @@ class CompVis:
                     force=True,  # always move original model to cpu
                 )
                 model.cond_stage_model.device = "cpu"
-                self.control_net_manager.load_controlnet(f"control_{control_type}")
+                if self.model_baseline == "stable diffusion 2":
+                    model_suffix = f"{control_type}_sd2"
+                else:
+                    model_suffix = control_type
+                self.control_net_manager.load_controlnet(f"control_{model_suffix}")
                 self.control_net_manager.load_control_ldm(
-                    f"control_{control_type}", self.model_name, model.state_dict(), _device=self.model["device"]
+                    f"control_{model_suffix}", self.model_name, model.state_dict(), _device=self.model["device"]
                 )
-                loaded_control_ldm = f"control_{control_type}_{self.model_name}"
+                loaded_control_ldm = f"control_{model_suffix}_{self.model_name}"
                 self.model_name = loaded_control_ldm
                 self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
                 if control_type == "canny":
