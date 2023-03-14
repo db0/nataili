@@ -827,7 +827,7 @@ class CompVis:
                     )
                 else:
                     logger.debug(
-                        f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
+                        f"[Low VRAM] controlnet start"
                     )
                 with torch.no_grad():
                     for n in range(n_iter):
