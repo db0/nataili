@@ -834,10 +834,11 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
+                        # Reforce everything onto cpu before doing prompt weighting
                         low_vram(
                             [
-                                (self.control_net_model, self.model["device"]),
-                                (self.control_net_model.control_model, self.model["device"]),
+                                (self.control_net_model, "cpu"),
+                                (self.control_net_model.control_model, "cpu"),
                                 (
                                     model.cond_stage_model.transformer
                                     if hasattr(model.cond_stage_model, "transformer")
@@ -873,7 +874,21 @@ class CompVis:
                             )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
-                        self.control_net_model.control_scales = [1.0] * 13
+                        self.control_net_model.control_scales = [denoising_strength * 2] * 13
+                        low_vram(
+                            [
+                                (self.control_net_model, self.model["device"]),
+                                (self.control_net_model.control_model, self.model["device"]),
+                                (
+                                    model.cond_stage_model.transformer
+                                    if hasattr(model.cond_stage_model, "transformer")
+                                    else model.cond_stage_model.model.transformer,
+                                    "cpu",
+                                ),
+                                (self.control_net_model.first_stage_model, "cpu"),
+                            ],
+                            force=True,
+                        )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
                             n_iter,
