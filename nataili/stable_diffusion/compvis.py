@@ -227,8 +227,10 @@ class CompVis:
                 model.cond_stage_model.device = "cpu"
                 if self.model_baseline == "stable diffusion 2":
                     model_suffix = f"{control_type}_sd2"
+                    resolution = 768
                 else:
                     model_suffix = control_type
+                    resolution = 512
                 self.control_net_manager.load_controlnet(f"control_{model_suffix}")
                 self.control_net_manager.load_control_ldm(
                     f"control_{model_suffix}", self.model_name, model.state_dict(), _device=self.model["device"]
@@ -237,32 +239,32 @@ class CompVis:
                 self.model_name = loaded_control_ldm
                 self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
                 if control_type == "canny":
-                    result = Canny(init_as_control)(init_img)
+                    result = Canny(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "hed":
-                    result = HED(init_as_control)(init_img)
+                    result = HED(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "depth":
-                    result = Depth(init_as_control)(init_img)
+                    result = Depth(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "scribble":
                     # init can't be used as control for scribbles
-                    result = Scribble()(init_img)
+                    result = Scribble()(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "fakescribbles":
-                    result = FakeScribbles(init_as_control)(init_img)
+                    result = FakeScribbles(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "hough":
-                    result = Hough(init_as_control)(init_img)
+                    result = Hough(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "openpose":
-                    result = Openpose(init_as_control)(init_img)
+                    result = Openpose(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "seg":
-                    result = Seg(init_as_control)(init_img)
+                    result = Seg(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "normal":
-                    result = Normal(init_as_control)(init_img)
+                    result = Normal(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 else:
                     raise ValueError(f"Invalid control_type: {control_type}")
