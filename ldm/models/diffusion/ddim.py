@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like, extract_into_tensor
 from nataili import disable_progress
+from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 from nataili.util.logger import logger
 
 
@@ -189,6 +190,10 @@ class DDIMSampler(object):
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             model_output = self.model.apply_model(x, t, c)
         else:
+            if c.shape[1] != unconditional_conditioning.shape[1]:
+                c, unconditional_conditioning = fix_mismatched_tensors(
+                    c, unconditional_conditioning, self.model
+                )
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
