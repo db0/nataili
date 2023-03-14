@@ -881,7 +881,7 @@ class CompVis:
                                     model.cond_stage_model.transformer
                                     if hasattr(model.cond_stage_model, "transformer")
                                     else model.cond_stage_model.model.transformer,
-                                    "cpu",
+                                    self.model["device"],
                                 ),
                                 (self.control_net_model.first_stage_model, "cpu"),
                             ],
