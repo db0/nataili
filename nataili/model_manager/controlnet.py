@@ -90,6 +90,7 @@ class ControlNetModelManager(BaseModelManager):
         else:
             for key in keys:
                 p = sd15_with_control_state_dict[key]
+                key_name = f'model.diffusion_model.{key.replace("control_model.", "")}'
                 if key in input_state_dict.keys():
                     # logger.info(f"merging {key_name} from input {key} from control")
                     p_new = p + input_state_dict[key_name].clone().cpu()
