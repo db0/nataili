@@ -195,31 +195,31 @@ class DDIMSampler(object):
                     c, unconditional_conditioning, self.model
                 )
             c.cuda()
-            unconditional_conditioning.cuda()
+            uc = unconditional_conditioning.cuda()
             print("Device Locations")
             print(torch.get_device(c))
-            print(torch.get_device(unconditional_conditioning))
+            print(torch.get_device(uc))
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
-                assert isinstance(unconditional_conditioning, dict)
+                assert isinstance(uc, dict)
                 c_in = dict()
                 for k in c:
                     if isinstance(c[k], list):
                         c_in[k] = [torch.cat([
-                            unconditional_conditioning[k][i],
+                            uc[k][i],
                             c[k][i]]) for i in range(len(c[k]))]
                     else:
                         c_in[k] = torch.cat([
-                                unconditional_conditioning[k],
+                                uc[k],
                                 c[k]])
             elif isinstance(c, list):
                 c_in = list()
-                assert isinstance(unconditional_conditioning, list)
+                assert isinstance(uc, list)
                 for i in range(len(c)):
-                    c_in.append(torch.cat([unconditional_conditioning[i], c[i]]))
+                    c_in.append(torch.cat([uc[i], c[i]]))
             else:
-                c_in = torch.cat([unconditional_conditioning, c])
+                c_in = torch.cat([uc, c])
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
