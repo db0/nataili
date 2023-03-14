@@ -834,21 +834,19 @@ class CompVis:
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
-                        # Reforce everything onto cpu before doing prompt weighting
-                        low_vram(
-                            [
-                                (self.control_net_model, "cpu"),
-                                (self.control_net_model.control_model, "cpu"),
-                                (
-                                    model.cond_stage_model.transformer
-                                    if hasattr(model.cond_stage_model, "transformer")
-                                    else model.cond_stage_model.model.transformer,
-                                    "cpu",
-                                ),
-                                (self.control_net_model.first_stage_model, "cpu"),
-                            ],
-                            force=True,
-                        )
+                        # Force sd2 transformer to gpy before doing prompt weighting
+                        if self.model_baseline == "stable diffusion 2":
+                            low_vram(
+                                [
+                                    (
+                                        model.cond_stage_model.transformer
+                                        if hasattr(model.cond_stage_model, "transformer")
+                                        else model.cond_stage_model.model.transformer,
+                                        self.model["device"],
+                                    ),
+                                ],
+                                force=True,
+                            )
                         """
                         NOTE:
                         Use `self.control_net_model` instead of `model` for the control net
