@@ -122,7 +122,7 @@ class EsrganModelManager(BaseModelManager):
             scale=2,
             model_path=model_path,
             model=RealESRGAN_models[self.models[model_name]["name"]],
-            tile=512,
+            tile=64,
             tile_pad=10,
             pre_pad=0,
             half=True if half_precision else False,
