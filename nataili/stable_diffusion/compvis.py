@@ -479,8 +479,6 @@ class CompVis:
                         t_enc_steps,
                         unconditional_guidance_scale=cfg_scale,
                         unconditional_conditioning=unconditional_conditioning,
-                        z_mask=z_mask,
-                        x0=x0,
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
@@ -809,16 +807,30 @@ class CompVis:
                             logger.debug(
                                 f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                             )
-                            samples_ddim, _ = sampler.sample(
-                                S=ddim_steps,
-                                conditioning=extra_args["cond"],
-                                unconditional_guidance_scale=extra_args["text_cfg_scale"],
-                                unconditional_conditioning=extra_args["uncond"],
-                                x_T=z,
-                                karras=karras,
-                                sigma_override=sigma_override,
-                                extra_args=extra_args,
-                            )
+                            if sampler_name == "DDIM":
+                                samples_ddim, _ = sampler.sample(
+                                    S=ddim_steps,
+                                    batch_size=batch_size,
+                                    shape=shape,
+                                    conditioning=extra_args["cond"],
+                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                    unconditional_conditioning=extra_args["uncond"],
+                                    x_T=z,
+                                    karras=karras,
+                                    sigma_override=sigma_override,
+                                    extra_args=extra_args,
+                                )
+                            else:
+                                samples_ddim, _ = sampler.sample(
+                                    S=ddim_steps,
+                                    conditioning=extra_args["cond"],
+                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                    unconditional_conditioning=extra_args["uncond"],
+                                    x_T=z,
+                                    karras=karras,
+                                    sigma_override=sigma_override,
+                                    extra_args=extra_args,
+                                )
                             low_vram(
                                 [
                                     (model, "cpu"),
