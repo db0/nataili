@@ -206,8 +206,11 @@ class CompVis:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
                 control_type is not None
+                and (
+                    ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
+                    or ("stable diffusion 2" not in self.model_baseline)
+                )
                 and init_img is not None
-                and "stable diffusion 2" not in self.model_baseline
                 and self.model_name != "pix2pix"
             ):
                 sampler_name = "DDIM"
@@ -225,40 +228,48 @@ class CompVis:
                     force=True,  # always move original model to cpu
                 )
                 model.cond_stage_model.device = "cpu"
-                self.control_net_manager.load_controlnet(f"control_{control_type}")
+                if self.model_baseline == "stable diffusion 2":
+                    model_suffix = f"{control_type}_sd2"
+                    resolution = 768
+                else:
+                    model_suffix = control_type
+                    resolution = 512
+                self.control_net_manager.load_controlnet(f"control_{model_suffix}")
                 self.control_net_manager.load_control_ldm(
-                    f"control_{control_type}", self.model_name, model.state_dict(), _device=self.model["device"]
+                    f"control_{model_suffix}", self.model_name, model.state_dict(), _device=self.model["device"]
                 )
-                loaded_control_ldm = f"control_{control_type}_{self.model_name}"
+                loaded_control_ldm = f"control_{model_suffix}_{self.model_name}"
                 self.model_name = loaded_control_ldm
                 self.control_net_model = self.control_net_manager.loaded_models[loaded_control_ldm]["model"]
                 if control_type == "canny":
-                    result = Canny(init_as_control)(init_img)
+                    result = Canny(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "hed":
-                    result = HED(init_as_control)(init_img)
+                    result = HED(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "depth":
-                    result = Depth(init_as_control)(init_img)
+                    result = Depth(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "scribble":
                     # init can't be used as control for scribbles
-                    result = Scribble()(init_img)
+                    result = Scribble()(init_img, resolution=resolution)
                     control = result["control"]
                 elif control_type == "fakescribbles":
-                    result = FakeScribbles(init_as_control)(init_img)
+                    result = FakeScribbles(init_as_control)(
+                        init_img, resolution=resolution, detect_resolution=resolution
+                    )
                     control = result["control"]
                 elif control_type == "hough":
-                    result = Hough(init_as_control)(init_img)
+                    result = Hough(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "openpose":
-                    result = Openpose(init_as_control)(init_img)
+                    result = Openpose(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "seg":
-                    result = Seg(init_as_control)(init_img)
+                    result = Seg(init_as_control)(init_img, resolution=resolution, detect_resolution=resolution)
                     control = result["control"]
                 elif control_type == "normal":
-                    result = Normal(init_as_control)(init_img)
+                    result = Normal(init_as_control)(init_img, resolution=resolution)
                     control = result["control"]
                 else:
                     raise ValueError(f"Invalid control_type: {control_type}")
@@ -307,7 +318,12 @@ class CompVis:
                     [
                         (self.control_net_model, "cpu"),
                         (self.control_net_model.control_model, "cpu"),
-                        (self.control_net_model.cond_stage_model.transformer, self.model["device"]),
+                        (
+                            model.cond_stage_model.transformer
+                            if hasattr(model.cond_stage_model, "transformer")
+                            else model.cond_stage_model.model.transformer,
+                            self.model["device"],
+                        ),
                         (self.control_net_model.first_stage_model, "cpu"),
                     ],
                     force=True,  # always move control net to gpu
@@ -463,8 +479,6 @@ class CompVis:
                         t_enc_steps,
                         unconditional_guidance_scale=cfg_scale,
                         unconditional_conditioning=unconditional_conditioning,
-                        z_mask=z_mask,
-                        x0=x0,
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
@@ -484,7 +498,7 @@ class CompVis:
                 sigma_override: dict = None,
             ):
                 start_sampling = time.time()
-                if sampler_name == "dpmsolver":
+                if sampler_name in ["dpmsolver", "DDIM"]:
                     samples_ddim, _ = sampler.sample(
                         ddim_steps,
                         batch_size,
@@ -524,9 +538,7 @@ class CompVis:
                     sampler_name == "PLMS" and "stable diffusion 2" not in self.model_baseline
                 ):  # TODO: check support for sd2.x
                     sampler = PLMSSampler(model)
-                elif (
-                    sampler_name == "DDIM" and "stable diffusion 2" not in self.model_baseline
-                ):  # TODO: check support for sd2.x
+                elif sampler_name == "DDIM":
                     sampler = DDIMSampler(model)
                 elif sampler_name == "k_dpm_2_a":
                     sampler = KDiffusionSampler(model, "dpm_2_ancestral", v=v)
@@ -636,18 +648,19 @@ class CompVis:
                             else:
                                 x = create_random_tensors(shape, seeds=seeds, device=self.model["device"])
                             init_data = init(model, init_img) if init_img else None
-                            low_vram(
-                                [
-                                    (model, self.model["device"]),
-                                    (
-                                        model.cond_stage_model.transformer
-                                        if hasattr(model.cond_stage_model, "transformer")
-                                        else model.cond_stage_model.model.transformer,
-                                        "cpu",
-                                    ),
-                                    (model.first_stage_model, "cpu"),
-                                ],
-                            )
+                            if sampler_name != "DDIM":
+                                low_vram(
+                                    [
+                                        (model, self.model["device"]),
+                                        (
+                                            model.cond_stage_model.transformer
+                                            if hasattr(model.cond_stage_model, "transformer")
+                                            else model.cond_stage_model.model.transformer,
+                                            "cpu",
+                                        ),
+                                        (model.first_stage_model, "cpu"),
+                                    ],
+                                )
                             if low_vram_mode():
                                 model.cond_stage_model.device = "cpu"
                             logger.debug(
@@ -794,16 +807,30 @@ class CompVis:
                             logger.debug(
                                 f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                             )
-                            samples_ddim, _ = sampler.sample(
-                                S=ddim_steps,
-                                conditioning=extra_args["cond"],
-                                unconditional_guidance_scale=extra_args["text_cfg_scale"],
-                                unconditional_conditioning=extra_args["uncond"],
-                                x_T=z,
-                                karras=karras,
-                                sigma_override=sigma_override,
-                                extra_args=extra_args,
-                            )
+                            if sampler_name == "DDIM":
+                                samples_ddim, _ = sampler.sample(
+                                    S=ddim_steps,
+                                    batch_size=batch_size,
+                                    shape=shape,
+                                    conditioning=extra_args["cond"],
+                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                    unconditional_conditioning=extra_args["uncond"],
+                                    x_T=z,
+                                    karras=karras,
+                                    sigma_override=sigma_override,
+                                    extra_args=extra_args,
+                                )
+                            else:
+                                samples_ddim, _ = sampler.sample(
+                                    S=ddim_steps,
+                                    conditioning=extra_args["cond"],
+                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                    unconditional_conditioning=extra_args["uncond"],
+                                    x_T=z,
+                                    karras=karras,
+                                    sigma_override=sigma_override,
+                                    extra_args=extra_args,
+                                )
                             low_vram(
                                 [
                                     (model, "cpu"),
@@ -814,14 +841,32 @@ class CompVis:
                                 f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                             )
             else:
-                logger.debug(
-                    f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
-                )
+                if self.model_baseline == "stable diffusion 1":
+                    logger.debug(
+                        f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
+                    )
+                else:
+                    logger.debug("[Low VRAM] controlnet start")
                 with torch.no_grad():
                     for n in range(n_iter):
                         prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
                         seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
                         logger.debug(f"Iteration: {n+1}/{n_iter}")
+                        # Force all components to gpu before doing prompt weighting
+                        low_vram(
+                            [
+                                (self.control_net_model, self.model["device"]),
+                                (self.control_net_model.control_model, self.model["device"]),
+                                (
+                                    model.cond_stage_model.transformer
+                                    if hasattr(model.cond_stage_model, "transformer")
+                                    else model.cond_stage_model.model.transformer,
+                                    self.model["device"],
+                                ),
+                                (self.control_net_model.first_stage_model, self.model["device"]),
+                            ],
+                            force=True,
+                        )
                         """
                         NOTE:
                         Use `self.control_net_model` instead of `model` for the control net
@@ -847,18 +892,20 @@ class CompVis:
                             )
                         shape = (4, H // 8, W // 8)
                         logger.info(f"shape = {shape}")
-                        self.control_net_model.control_scales = [1.0] * 13
+                        self.control_net_model.control_scales = [denoising_strength * 2] * 13
                         low_vram(
                             [
                                 (self.control_net_model, self.model["device"]),
                                 (self.control_net_model.control_model, self.model["device"]),
-                                (self.control_net_model.cond_stage_model.transformer, "cpu"),
+                                (
+                                    model.cond_stage_model.transformer
+                                    if hasattr(model.cond_stage_model, "transformer")
+                                    else model.cond_stage_model.model.transformer,
+                                    self.model["device"],
+                                ),
                                 (self.control_net_model.first_stage_model, "cpu"),
                             ],
                             force=True,
-                        )
-                        logger.debug(
-                            f"[Low VRAM] controlnet before sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
                         samples_ddim, _ = sampler.sample(
                             ddim_steps,
@@ -877,9 +924,6 @@ class CompVis:
                                 (self.control_net_model.first_stage_model, self.model["device"]),
                             ],
                             force=True,
-                        )
-                        logger.debug(
-                            f"[Low VRAM] controlnet after sampling - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
 
             logger.debug(

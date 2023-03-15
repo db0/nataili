@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like, extract_into_tensor
 from nataili import disable_progress
+from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 from nataili.util.logger import logger
 
 
@@ -209,12 +210,18 @@ class DDIMSampler(object):
                 for i in range(len(c)):
                     c_in.append(torch.cat([unconditional_conditioning[i], c[i]]))
             else:
-                c_in = torch.cat([unconditional_conditioning, c])
+                if c.shape[1] != unconditional_conditioning.shape[1]:
+                    c, unconditional_conditioning = fix_mismatched_tensors(
+                        c, unconditional_conditioning, self.model
+                    )
+                c.cuda()
+                uc = unconditional_conditioning.cuda()
+                c_in = torch.cat([uc, c])
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
         if self.model.parameterization == "v":
-            e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
+            e_t = self.predict_eps_from_z_and_v(x, t, model_output)
         else:
             e_t = model_output
 
@@ -236,7 +243,7 @@ class DDIMSampler(object):
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
-            pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
+            pred_x0 = self.predict_start_from_z_and_v(x, t, model_output)
 
         if quantize_denoised:
             pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
@@ -251,6 +258,20 @@ class DDIMSampler(object):
             noise = torch.nn.functional.dropout(noise, p=noise_dropout)
         x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
         return x_prev, pred_x0
+    
+    def predict_start_from_z_and_v(self, x_t, t, v):
+        # self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
+        # self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
+        return (
+                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * x_t -
+                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * v
+        )
+
+    def predict_eps_from_z_and_v(self, x_t, t, v):
+        return (
+                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * v +
+                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * x_t
+        )
 
     @torch.no_grad()
     def encode(self, x0, c, t_enc, use_original_steps=False, return_intermediates=None,

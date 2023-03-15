@@ -43,3 +43,27 @@ for control_type in control_types:
         control_type=control_type,
         ddim_steps=20,
     )
+
+control_types_v2 = ["canny", "hed", "depth",  "openpose", "scribble", "fakescribbles"]
+mm.unload_model(model)
+
+model = "Illuminati Diffusion"
+mm.load(model)
+
+for control_type in control_types_v2:
+    logger.info(f"Testing control_type for sd2.x='{control_type}'")
+    compvis = CompVis(
+        model=mm.loaded_models[model],
+        model_baseline=mm.models[model]["baseline"],
+        model_name=model,
+        output_dir=output_dir,
+        disable_voodoo=True,
+        control_net_manager=cnmm
+    )
+    compvis.generate(
+        prompt,
+        init_img=init_image,
+        control_type=control_type,
+        ddim_steps=20,
+    )
+

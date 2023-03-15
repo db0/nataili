@@ -119,10 +119,10 @@ class EsrganModelManager(BaseModelManager):
         logger.info(f"Loading model {model_name} on {device}")
         logger.info(f"Model path: {model_path}")
         model = RealESRGANer(
-            scale=2,
+            scale=4,
             model_path=model_path,
             model=RealESRGAN_models[self.models[model_name]["name"]],
-            pre_pad=0,
+            tile=512,
             half=True if half_precision else False,
             device=device,
             gpu_id=gpu_id,
