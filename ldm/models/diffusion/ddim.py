@@ -150,6 +150,13 @@ class DDIMSampler(object):
 
         iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps, disable=disable_progress.active)
 
+        if cond.shape[1] != unconditional_conditioning.shape[1]:
+            cond, unconditional_conditioning = fix_mismatched_tensors(
+                cond, unconditional_conditioning, self.model
+            )
+        cond.cuda()
+        uc = unconditional_conditioning.cuda()
+
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full((b,), step, device=device, dtype=torch.long)
@@ -168,7 +175,7 @@ class DDIMSampler(object):
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
                                       corrector_kwargs=corrector_kwargs,
                                       unconditional_guidance_scale=unconditional_guidance_scale,
-                                      unconditional_conditioning=unconditional_conditioning,
+                                      unconditional_conditioning=uc,
                                       dynamic_threshold=dynamic_threshold)
             img, pred_x0 = outs
             if callback: callback(i)
@@ -190,36 +197,27 @@ class DDIMSampler(object):
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             model_output = self.model.apply_model(x, t, c)
         else:
-            if c.shape[1] != unconditional_conditioning.shape[1]:
-                c, unconditional_conditioning = fix_mismatched_tensors(
-                    c, unconditional_conditioning, self.model
-                )
-            c.cuda()
-            uc = unconditional_conditioning.cuda()
-            print("Device Locations")
-            print(torch.get_device(c))
-            print(torch.get_device(uc))
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
-                assert isinstance(uc, dict)
+                assert isinstance(unconditional_conditioning, dict)
                 c_in = dict()
                 for k in c:
                     if isinstance(c[k], list):
                         c_in[k] = [torch.cat([
-                            uc[k][i],
+                            unconditional_conditioning[k][i],
                             c[k][i]]) for i in range(len(c[k]))]
                     else:
                         c_in[k] = torch.cat([
-                                uc[k],
+                                unconditional_conditioning[k],
                                 c[k]])
             elif isinstance(c, list):
                 c_in = list()
                 assert isinstance(uc, list)
                 for i in range(len(c)):
-                    c_in.append(torch.cat([uc[i], c[i]]))
+                    c_in.append(torch.cat([unconditional_conditioning[i], c[i]]))
             else:
-                c_in = torch.cat([uc, c])
+                c_in = torch.cat([unconditional_conditioning, c])
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
