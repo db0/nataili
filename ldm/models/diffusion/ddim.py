@@ -190,15 +190,6 @@ class DDIMSampler(object):
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             model_output = self.model.apply_model(x, t, c)
         else:
-            if c.shape[1] != unconditional_conditioning.shape[1]:
-                c, unconditional_conditioning = fix_mismatched_tensors(
-                    c, unconditional_conditioning, self.model
-                )
-            c.cuda()
-            uc = unconditional_conditioning.cuda()
-            print("Device Locations")
-            print(torch.get_device(c))
-            print(torch.get_device(uc))
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
@@ -219,6 +210,12 @@ class DDIMSampler(object):
                 for i in range(len(c)):
                     c_in.append(torch.cat([uc[i], c[i]]))
             else:
+                if c.shape[1] != unconditional_conditioning.shape[1]:
+                    c, unconditional_conditioning = fix_mismatched_tensors(
+                        c, unconditional_conditioning, self.model
+                    )
+                c.cuda()
+                uc = unconditional_conditioning.cuda()
                 c_in = torch.cat([uc, c])
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
