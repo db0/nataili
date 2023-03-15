@@ -193,7 +193,7 @@ class DDIMSampler(object):
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
             if isinstance(c, dict):
-                assert isinstance(uc, dict)
+                assert isinstance(unconditional_conditioning, dict)
                 c_in = dict()
                 for k in c:
                     if isinstance(c[k], list):
