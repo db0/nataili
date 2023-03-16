@@ -214,7 +214,7 @@ class CompVis:
                 and init_img is not None
                 and self.model_name != "pix2pix"
             ):
-                sampler_name = "DDIM"
+                # sampler_name = "DDIM"
                 low_vram(
                     [
                         (model, "cpu"),
