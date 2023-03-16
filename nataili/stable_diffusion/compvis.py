@@ -967,8 +967,10 @@ class CompVis:
                 x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
                 x_sample = x_sample.astype(np.uint8)
                 image = Image.fromarray(x_sample)
-            else:
+            elif not return_control_map:
                 image = Image.fromarray(x_sample)
+            else:
+                image = x_sample
             if self.safety_checker is not None and self.filter_nsfw:
                 image_features = self.feature_extractor(image, return_tensors="pt").to(self.safety_checker.device)
                 output_images, has_nsfw_concept = self.safety_checker(
