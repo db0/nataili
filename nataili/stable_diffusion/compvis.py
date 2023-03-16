@@ -876,7 +876,9 @@ class CompVis:
                             cond = {
                                 "c_concat": [control],
                                 "c_crossattn": [
-                                    get_learned_conditioning_with_prompt_weights(prompt, self.control_net_model, clip_skip)
+                                    get_learned_conditioning_with_prompt_weights(
+                                        prompt, self.control_net_model, clip_skip
+                                    )
                                 ],
                             }
                             un_cond = {
@@ -931,7 +933,7 @@ class CompVis:
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
             )
-            
+
             if control_type is None:
                 x_samples_ddim = model.decode_first_stage(samples_ddim)
                 x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
@@ -960,9 +962,7 @@ class CompVis:
                     : 200 - len(full_path)
                 ]
             else:
-                filename = f"{base_count:05}-{control_type}_detected_map"[
-                    : 200 - len(full_path)
-                ]
+                filename = f"{base_count:05}-{control_type}_detected_map"[: 200 - len(full_path)]
             if control_type is None:
                 x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
                 x_sample = x_sample.astype(np.uint8)

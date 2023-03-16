@@ -153,7 +153,11 @@ class Hough(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": [255 - cv2.dilate(detected_map, np.ones(shape=(3, 3), dtype=np.uint8), iterations=1)], "shape": (H, W, C)}
+        return {
+            "control": control,
+            "detected_map": [255 - cv2.dilate(detected_map, np.ones(shape=(3, 3), dtype=np.uint8), iterations=1)],
+            "shape": (H, W, C),
+        }
 
 
 class Depth(Annotation):
