@@ -927,6 +927,9 @@ class CompVis:
                                 ],
                                 force=True,
                             )
+                else:
+                    prompts = all_prompts[0]
+                    seeds = all_seeds[0]
 
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
