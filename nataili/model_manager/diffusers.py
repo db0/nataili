@@ -114,7 +114,7 @@ class DiffusersModelManager(BaseModelManager):
                 pipe = StableDiffusionInpaintPipeline.from_pretrained(
                     model_path,
                     revision=None,
-                    torch_dtype=torch.float16 if half_precision else None,
+                    torch_dtype=None,
                     use_auth_token=self.models[model_name]["hf_auth"],
                 )
         pipe.enable_attention_slicing()
