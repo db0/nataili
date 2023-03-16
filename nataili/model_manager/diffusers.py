@@ -103,12 +103,20 @@ class DiffusersModelManager(BaseModelManager):
                 use_auth_token=self.models[model_name]["hf_auth"],
             )
         else:
-            pipe = StableDiffusionInpaintPipeline.from_pretrained(
-                model_path,
-                revision="fp16" if half_precision else None,
-                torch_dtype=torch.float16 if half_precision else None,
-                use_auth_token=self.models[model_name]["hf_auth"],
-            )
+            try:
+                pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                    model_path,
+                    revision="fp16" if half_precision else None,
+                    torch_dtype=torch.float16 if half_precision else None,
+                    use_auth_token=self.models[model_name]["hf_auth"],
+                )
+            except:
+                pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                    model_path,
+                    revision=None,
+                    torch_dtype=torch.float16 if half_precision else None,
+                    use_auth_token=self.models[model_name]["hf_auth"],
+                )
         pipe.enable_attention_slicing()
 
         if voodoo:
