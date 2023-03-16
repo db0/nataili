@@ -197,7 +197,7 @@ class CompVis:
             "canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"
         ] = None,
         init_as_control: bool = False,
-        return_control_map: bool = True,
+        return_control_map: bool = False,
     ):
         model_context = (
             load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
