@@ -203,19 +203,18 @@ class CompVis:
             load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
         )
         with model_context as model:
-            logger.info(f"Model Baseline = {self.model_baseline}; Control Type = {control_type}; init_img = {init_img}; Model Name = {self.model_name}")
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
                 control_type is not None
                 and (
                     ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
-                    or ("stable diffusion 1" in self.model_baseline)
+                    or ("stable diffusion 2" not in self.model_baseline)
                 )
                 and init_img is not None
                 and self.model_name != "pix2pix"
             ):
-                # sampler_name = "DDIM"
+                sampler_name = "DDIM"
                 low_vram(
                     [
                         (model, "cpu"),
@@ -458,7 +457,6 @@ class CompVis:
                         unconditional_conditioning=unconditional_conditioning,
                         unconditional_guidance_scale=cfg_scale,
                         x_T=x,
-                        process_type="img2img",
                     )
                 else:
                     x0, z_mask = init_data
@@ -521,7 +519,6 @@ class CompVis:
                         x_T=x,
                         karras=karras,
                         sigma_override=sigma_override,
-                        process_type="txt2img"
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
@@ -833,7 +830,6 @@ class CompVis:
                                     karras=karras,
                                     sigma_override=sigma_override,
                                     extra_args=extra_args,
-                                    process_type="pix2pix"
                                 )
                             low_vram(
                                 [
@@ -915,37 +911,16 @@ class CompVis:
                                 ],
                                 force=True,
                             )
-                            if sampler_name == "DDIM":
-                                samples_ddim, _ = sampler.sample(
-                                    ddim_steps,
-                                    n_iter,
-                                    shape,
-                                    cond,
-                                    verbose=False,
-                                    eta=ddim_eta,
-                                    unconditional_guidance_scale=cfg_scale,
-                                    unconditional_conditioning=un_cond,
-                                )
-                            else:
-                                extra_args = {
-                                    "cond": cond,
-                                    "uncond": uncond,
-                                    "cond_scale": cfg_scale,
-                                    "mask": z_mask,
-                                    "x0": x0,
-                                }
-                                z = torch.randn_like(cond["c_concat"][0])
-                                samples_ddim, _ = sampler.sample(
-                                    S=ddim_steps,
-                                    conditioning=extra_args["cond"],
-                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
-                                    unconditional_conditioning=extra_args["uncond"],
-                                    x_T=z,
-                                    karras=karras,
-                                    sigma_override=sigma_override,
-                                    extra_args=extra_args,
-                                    process_type="ControlNet"
-                                )
+                            samples_ddim, _ = sampler.sample(
+                                ddim_steps,
+                                n_iter,
+                                shape,
+                                cond,
+                                verbose=False,
+                                eta=ddim_eta,
+                                unconditional_guidance_scale=cfg_scale,
+                                unconditional_conditioning=un_cond,
+                            )
                             low_vram(
                                 [
                                     (self.control_net_model, "cpu"),

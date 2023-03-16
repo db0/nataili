@@ -7,7 +7,6 @@ from nataili import disable_progress
 from nataili.stable_diffusion.prompt_weights import fix_mismatched_tensors
 from nataili.util.cast import autocast_cuda
 from nataili.util.logger import logger
-from typing import Literal
 
 warnings.filterwarnings("ignore")
 
@@ -36,7 +35,6 @@ class KDiffusionSampler:
         karras=False,
         sigma_override: dict = None,
         extra_args=None,
-        process_type: Literal["img2img", "pix2pix", "ControlNet"] = "img2img",
     ):
         logger.debug(f"model.device: {self.model.device}")
         x0, z_mask = init_data
@@ -71,12 +69,10 @@ class KDiffusionSampler:
         if z_mask is not None and obliterate:
             random = torch.randn(z_mask.shape, device=xi.device)
             xi = (z_mask * x) + ((1 - z_mask) * xi)  # NOTE: random is not used here. Check if this is correct.
-        if process_type == "img2img":
+        if extra_args is None:
             model_wrap_cfg = CFGMaskedDenoiser(self.model_wrap)
-        elif process_type == "pix2pix":
-            model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
         else:
-            model_wrap_cfg = CFGControlNetDenoiser(self.model_wrap)
+            model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
         if extra_args is None:
             if conditioning.shape[1] != unconditional_conditioning.shape[1]:
                 conditioning, unconditional_conditioning = fix_mismatched_tensors(
@@ -143,7 +139,6 @@ class KDiffusionSampler:
         karras=False,
         sigma_override: dict = None,
         extra_args=None,
-        process_type: Literal["txt2img", "pix2pix", "ControlNet"] = "txt2img"
     ):
         logger.debug(f"model.device: {self.model.device}")
         if sigma_override:
@@ -174,12 +169,10 @@ class KDiffusionSampler:
             sigmas = self.model_wrap.get_sigmas(S)
         x = x_T * sigmas[0]
 
-        if process_type == "txt2img":
+        if extra_args is None:
             model_wrap_cfg = CFGDenoiser(self.model_wrap)
-        elif process_type == "pix2pix":
-            model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
         else:
-            model_wrap_cfg = CFGControlNetDenoiser(self.model_wrap)
+            model_wrap_cfg = CFGPix2PixDenoiser(self.model_wrap)
         if extra_args is None:
             if conditioning.shape[1] != unconditional_conditioning.shape[1]:
                 conditioning, unconditional_conditioning = fix_mismatched_tensors(
@@ -281,29 +274,6 @@ class CFGPix2PixDenoiser(nn.Module):
         denoised = (
             out_uncond + text_cfg_scale * (out_cond - out_img_cond) + image_cfg_scale * (out_img_cond - out_uncond)
         )
-
-        if mask is not None:
-            assert x0 is not None
-            img_orig = x0
-            mask_inv = 1.0 - mask
-            denoised = (img_orig * mask_inv) + (mask * denoised)
-
-        return denoised
-
-class CFGControlNetDenoiser(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.inner_model = model
-
-    def forward(self, z, sigma, cond, uncond, cond_scale, mask, x0):
-        cfg_z = einops.repeat(z, "1 ... -> n ...", n=3)
-        cfg_sigma = einops.repeat(sigma, "1 ... -> n ...", n=3)
-        cfg_cond = {
-            "c_crossattn": [torch.cat([cond["c_crossattn"][0], uncond["c_crossattn"][0], uncond["c_crossattn"][0]])],
-            "c_concat": [torch.cat([cond["c_concat"][0], cond["c_concat"][0], uncond["c_concat"][0]])],
-        }
-        uncond, cond = self.inner_model(cfg_z, cfg_sigma, cond=cfg_cond).chunk(2)
-        denoised =  uncond + cond_scale + (cond - uncond)
 
         if mask is not None:
             assert x0 is not None
