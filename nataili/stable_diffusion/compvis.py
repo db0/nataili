@@ -938,15 +938,15 @@ class CompVis:
             else:
                 if not return_control_map:
                     x_samples_ddim = self.control_net_model.decode_first_stage(samples_ddim)
+                    x_samples_ddim = (
+                        (einops.rearrange(x_samples_ddim, "b c h w -> b h w c") * 127.5 + 127.5)
+                        .cpu()
+                        .numpy()
+                        .clip(0, 255)
+                        .astype(np.uint8)
+                    )
                 else:
                     x_samples_ddim = result["detected_map"]
-                x_samples_ddim = (
-                    (einops.rearrange(x_samples_ddim, "b c h w -> b h w c") * 127.5 + 127.5)
-                    .cpu()
-                    .numpy()
-                    .clip(0, 255)
-                    .astype(np.uint8)
-                )
 
         for i, x_sample in enumerate(x_samples_ddim):
             sanitized_prompt = slugify(prompts[i])
