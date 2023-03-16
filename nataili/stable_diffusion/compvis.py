@@ -929,7 +929,6 @@ class CompVis:
                             )
                 else:
                     prompts = all_prompts[0]
-                    seeds = all_seeds[0]
 
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
@@ -958,9 +957,14 @@ class CompVis:
             base_count = get_next_sequence_number(sample_path_i)
             if karras:
                 sampler_name += "_karras"
-            filename = f"{base_count:05}-{ddim_steps}_{sampler_name}_{seeds[i]}_{sanitized_prompt}"[
-                : 200 - len(full_path)
-            ]
+            if not return_control_map:
+                filename = f"{base_count:05}-{ddim_steps}_{sampler_name}_{seeds[i]}_{sanitized_prompt}"[
+                    : 200 - len(full_path)
+                ]
+            else:
+                filename = f"{base_count:05}-{control_type}_detected_map"[
+                    : 200 - len(full_path)
+                ]
             if control_type is None:
                 x_sample = 255.0 * rearrange(x_sample.cpu().numpy(), "c h w -> h w c")
                 x_sample = x_sample.astype(np.uint8)
