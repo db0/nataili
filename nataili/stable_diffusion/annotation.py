@@ -65,7 +65,7 @@ class Canny(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": 255 - detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [255 - detected_map], "shape": (H, W, C)}
 
 
 class HED(Annotation):
