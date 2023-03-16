@@ -457,6 +457,7 @@ class CompVis:
                         unconditional_conditioning=unconditional_conditioning,
                         unconditional_guidance_scale=cfg_scale,
                         x_T=x,
+                        process_type="img2img",
                     )
                 else:
                     x0, z_mask = init_data
@@ -519,6 +520,7 @@ class CompVis:
                         x_T=x,
                         karras=karras,
                         sigma_override=sigma_override,
+                        process_type="txt2img"
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
@@ -830,6 +832,7 @@ class CompVis:
                                     karras=karras,
                                     sigma_override=sigma_override,
                                     extra_args=extra_args,
+                                    process_type="pix2pix"
                                 )
                             low_vram(
                                 [
@@ -911,16 +914,37 @@ class CompVis:
                                 ],
                                 force=True,
                             )
-                            samples_ddim, _ = sampler.sample(
-                                ddim_steps,
-                                n_iter,
-                                shape,
-                                cond,
-                                verbose=False,
-                                eta=ddim_eta,
-                                unconditional_guidance_scale=cfg_scale,
-                                unconditional_conditioning=un_cond,
-                            )
+                            if sampler_name == "DDIM":
+                                samples_ddim, _ = sampler.sample(
+                                    ddim_steps,
+                                    n_iter,
+                                    shape,
+                                    cond,
+                                    verbose=False,
+                                    eta=ddim_eta,
+                                    unconditional_guidance_scale=cfg_scale,
+                                    unconditional_conditioning=un_cond,
+                                )
+                            else:
+                                extra_args = {
+                                    "cond": cond,
+                                    "uncond": uncond,
+                                    "cond_scale": cfg_scale,
+                                    "mask": z_mask,
+                                    "x0": x0,
+                                }
+                                z = torch.randn_like(cond["c_concat"][0])
+                                samples_ddim, _ = sampler.sample(
+                                    S=ddim_steps,
+                                    conditioning=extra_args["cond"],
+                                    unconditional_guidance_scale=extra_args["text_cfg_scale"],
+                                    unconditional_conditioning=extra_args["uncond"],
+                                    x_T=z,
+                                    karras=karras,
+                                    sigma_override=sigma_override,
+                                    extra_args=extra_args,
+                                    process_type="ControlNet"
+                                )
                             low_vram(
                                 [
                                     (self.control_net_model, "cpu"),
