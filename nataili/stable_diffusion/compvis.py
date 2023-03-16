@@ -197,6 +197,7 @@ class CompVis:
             "canny", "hed", "depth", "normal", "openpose", "seg", "scribble", "fakescribbles", "hough"
         ] = None,
         init_as_control: bool = False,
+        return_control_map: bool = True,
     ):
         model_context = (
             load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
@@ -841,90 +842,93 @@ class CompVis:
                                 f"[Low VRAM] pix2pix - before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                             )
             else:
-                if self.model_baseline == "stable diffusion 1":
-                    logger.debug(
-                        f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
-                    )
-                else:
-                    logger.debug("[Low VRAM] controlnet start")
-                with torch.no_grad():
-                    for n in range(n_iter):
-                        prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
-                        seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
-                        logger.debug(f"Iteration: {n+1}/{n_iter}")
-                        # Force all components to gpu before doing prompt weighting
-                        low_vram(
-                            [
-                                (self.control_net_model, self.model["device"]),
-                                (self.control_net_model.control_model, self.model["device"]),
-                                (
-                                    model.cond_stage_model.transformer
-                                    if hasattr(model.cond_stage_model, "transformer")
-                                    else model.cond_stage_model.model.transformer,
-                                    self.model["device"],
-                                ),
-                                (self.control_net_model.first_stage_model, self.model["device"]),
-                            ],
-                            force=True,
+                if not return_control_map:
+                    if self.model_baseline == "stable diffusion 1":
+                        logger.debug(
+                            f"[Low VRAM] controlnet start - control_net_model.device = {self.control_net_model.device}, model.cond_stage_model.device = {model.cond_stage_model.device},  model.cond_stage_model.transformer.device = {self.control_net_model.cond_stage_model.transformer.device}, model.first_stage_model.device = {self.control_net_model.first_stage_model.device}"
                         )
-                        """
-                        NOTE:
-                        Use `self.control_net_model` instead of `model` for the control net
-                        """
-                        cond = {
-                            "c_concat": [control],
-                            "c_crossattn": [
-                                get_learned_conditioning_with_prompt_weights(prompt, self.control_net_model, clip_skip)
-                            ],
-                        }
-                        un_cond = {
-                            "c_concat": [control],
-                            "c_crossattn": [
-                                get_learned_conditioning_with_prompt_weights(
-                                    negprompt, self.control_net_model, clip_skip
-                                )
-                            ],
-                        }
-
-                        if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
-                            cond["c_crossattn"][0], un_cond["c_crossattn"][0] = fix_mismatched_tensors(
-                                cond["c_crossattn"][0], un_cond["c_crossattn"][0], self.control_net_model
+                    else:
+                        logger.debug("[Low VRAM] controlnet start")
+                    with torch.no_grad():
+                        for n in range(n_iter):
+                            prompts = all_prompts[n * batch_size : (n + 1) * batch_size]
+                            seeds = all_seeds[n * batch_size : (n + 1) * batch_size]
+                            logger.debug(f"Iteration: {n+1}/{n_iter}")
+                            # Force all components to gpu before doing prompt weighting
+                            low_vram(
+                                [
+                                    (self.control_net_model, self.model["device"]),
+                                    (self.control_net_model.control_model, self.model["device"]),
+                                    (
+                                        model.cond_stage_model.transformer
+                                        if hasattr(model.cond_stage_model, "transformer")
+                                        else model.cond_stage_model.model.transformer,
+                                        self.model["device"],
+                                    ),
+                                    (self.control_net_model.first_stage_model, self.model["device"]),
+                                ],
+                                force=True,
                             )
-                        shape = (4, H // 8, W // 8)
-                        logger.info(f"shape = {shape}")
-                        self.control_net_model.control_scales = [denoising_strength * 2] * 13
-                        low_vram(
-                            [
-                                (self.control_net_model, self.model["device"]),
-                                (self.control_net_model.control_model, self.model["device"]),
-                                (
-                                    model.cond_stage_model.transformer
-                                    if hasattr(model.cond_stage_model, "transformer")
-                                    else model.cond_stage_model.model.transformer,
-                                    self.model["device"],
-                                ),
-                                (self.control_net_model.first_stage_model, "cpu"),
-                            ],
-                            force=True,
-                        )
-                        samples_ddim, _ = sampler.sample(
-                            ddim_steps,
-                            n_iter,
-                            shape,
-                            cond,
-                            verbose=False,
-                            eta=ddim_eta,
-                            unconditional_guidance_scale=cfg_scale,
-                            unconditional_conditioning=un_cond,
-                        )
-                        low_vram(
-                            [
-                                (self.control_net_model, "cpu"),
-                                (self.control_net_model.control_model, "cpu"),
-                                (self.control_net_model.first_stage_model, self.model["device"]),
-                            ],
-                            force=True,
-                        )
+                            """
+                            NOTE:
+                            Use `self.control_net_model` instead of `model` for the control net
+                            """
+                            cond = {
+                                "c_concat": [control],
+                                "c_crossattn": [
+                                    get_learned_conditioning_with_prompt_weights(prompt, self.control_net_model, clip_skip)
+                                ],
+                            }
+                            un_cond = {
+                                "c_concat": [control],
+                                "c_crossattn": [
+                                    get_learned_conditioning_with_prompt_weights(
+                                        negprompt, self.control_net_model, clip_skip
+                                    )
+                                ],
+                            }
+
+                            if cond["c_crossattn"][0].shape[1] != un_cond["c_crossattn"][0].shape[1]:
+                                cond["c_crossattn"][0], un_cond["c_crossattn"][0] = fix_mismatched_tensors(
+                                    cond["c_crossattn"][0], un_cond["c_crossattn"][0], self.control_net_model
+                                )
+                            shape = (4, H // 8, W // 8)
+                            logger.info(f"shape = {shape}")
+                            self.control_net_model.control_scales = [denoising_strength * 2] * 13
+                            low_vram(
+                                [
+                                    (self.control_net_model, self.model["device"]),
+                                    (self.control_net_model.control_model, self.model["device"]),
+                                    (
+                                        model.cond_stage_model.transformer
+                                        if hasattr(model.cond_stage_model, "transformer")
+                                        else model.cond_stage_model.model.transformer,
+                                        self.model["device"],
+                                    ),
+                                    (self.control_net_model.first_stage_model, "cpu"),
+                                ],
+                                force=True,
+                            )
+                            samples_ddim, _ = sampler.sample(
+                                ddim_steps,
+                                n_iter,
+                                shape,
+                                cond,
+                                verbose=False,
+                                eta=ddim_eta,
+                                unconditional_guidance_scale=cfg_scale,
+                                unconditional_conditioning=un_cond,
+                            )
+                            low_vram(
+                                [
+                                    (self.control_net_model, "cpu"),
+                                    (self.control_net_model.control_model, "cpu"),
+                                    (self.control_net_model.first_stage_model, self.model["device"]),
+                                ],
+                                force=True,
+                            )
+                else:
+                    samples_ddim = result["detected_map"]
 
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
