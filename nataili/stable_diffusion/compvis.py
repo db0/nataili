@@ -203,13 +203,14 @@ class CompVis:
             load_from_plasma(self.model["model"], self.model["device"]) if not self.disable_voodoo else nullcontext()
         )
         with model_context as model:
+            logger.info(f"Model Baseline = {self.model_baseline}; Control Type = {control_type}; init_img = {init_img}; Model Name = {self.model_name}")
             if self.disable_voodoo:
                 model: Union[LatentDiffusion, LatentDiffusionPix2Pix, ControlLDM] = self.model["model"]
             if (
                 control_type is not None
                 and (
                     ("stable diffusion 2" in self.model_baseline and control_type not in ["normal", "mlsd", "hough"])
-                    or ("stable diffusion 2" not in self.model_baseline)
+                    or ("stable diffusion 1" in self.model_baseline)
                 )
                 and init_img is not None
                 and self.model_name != "pix2pix"
