@@ -231,10 +231,9 @@ class CompVis:
                 model.cond_stage_model.device = "cpu"
                 if self.model_baseline == "stable diffusion 2":
                     model_suffix = f"{control_type}_sd2"
-                    resolution = 768
                 else:
                     model_suffix = control_type
-                    resolution = 512
+                resolution = round(min(height,width) / 64) * 64
                 self.control_net_manager.load_controlnet(f"control_{model_suffix}")
                 self.control_net_manager.load_control_ldm(
                     f"control_{model_suffix}", self.model_name, model.state_dict(), _device=self.model["device"]
