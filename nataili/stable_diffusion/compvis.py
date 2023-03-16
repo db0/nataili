@@ -927,8 +927,6 @@ class CompVis:
                                 ],
                                 force=True,
                             )
-                else:
-                    prompts = all_prompts[0]
 
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
@@ -951,7 +949,7 @@ class CompVis:
                     x_samples_ddim = result["detected_map"]
 
         for i, x_sample in enumerate(x_samples_ddim):
-            sanitized_prompt = slugify(prompts[i])
+            sanitized_prompt = slugify(prompt)
             full_path = os.path.join(os.getcwd(), sample_path)
             sample_path_i = sample_path
             base_count = get_next_sequence_number(sample_path_i)
