@@ -927,20 +927,19 @@ class CompVis:
                                 ],
                                 force=True,
                             )
-                else:
-                    samples_ddim = result["detected_map"]
 
             logger.debug(
                 f"[Low VRAM] decode - model.first_stage_model.device = {model.first_stage_model.device if control_type is None else self.control_net_model.first_stage_model.device}"
             )
-            x_samples_ddim = (
-                model.decode_first_stage(samples_ddim)
-                if control_type is None
-                else self.control_net_model.decode_first_stage(samples_ddim)
-            )
+            
             if control_type is None:
+                x_samples_ddim = model.decode_first_stage(samples_ddim)
                 x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
             else:
+                if not return_control_map:
+                    x_samples_ddim = self.control_net_model.decode_first_stage(samples_ddim)
+                else:
+                    x_samples_ddim = result["detected_map"]
                 x_samples_ddim = (
                     (einops.rearrange(x_samples_ddim, "b c h w -> b h w c") * 127.5 + 127.5)
                     .cpu()
