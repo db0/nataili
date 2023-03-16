@@ -895,7 +895,8 @@ class CompVis:
                                     cond["c_crossattn"][0], un_cond["c_crossattn"][0], self.control_net_model
                                 )
                             shape = (4, H // 8, W // 8)
-                            logger.info(f"shape = {shape}")
+                            logger.info(f"shape from ControlNet = {shape}")
+                            logger.info(f"shape from Source Image = {(4, height // 8, width // 8)}")
                             self.control_net_model.control_scales = [denoising_strength * 2] * 13
                             low_vram(
                                 [
