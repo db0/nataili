@@ -102,10 +102,17 @@ class DiffusersModelManager(BaseModelManager):
                 torch_dtype=torch.float16 if half_precision else None,
                 use_auth_token=self.models[model_name]["hf_auth"],
             )
+        elif self.models[model_name]["hf_branch"] == "fp16":
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                model_path,
+                revision="fp16",
+                torch_dtype=torch.float16 if half_precision else None,
+                use_auth_token=self.models[model_name]["hf_auth"],
+            )
         else:
             pipe = StableDiffusionInpaintPipeline.from_pretrained(
                 model_path,
-                revision="fp16" if half_precision else None,
+                revision=None,
                 torch_dtype=torch.float16 if half_precision else None,
                 use_auth_token=self.models[model_name]["hf_auth"],
             )

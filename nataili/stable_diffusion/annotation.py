@@ -65,7 +65,7 @@ class Canny(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": 255 - detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [255 - detected_map], "shape": (H, W, C)}
 
 
 class HED(Annotation):
@@ -90,7 +90,7 @@ class HED(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [detected_map], "shape": (H, W, C)}
 
 
 class FakeScribbles(Annotation):
@@ -120,7 +120,7 @@ class FakeScribbles(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [255 - detected_map], "shape": (H, W, C)}
 
 
 class Hough(Annotation):
@@ -153,7 +153,11 @@ class Hough(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {
+            "control": control,
+            "detected_map": [255 - cv2.dilate(detected_map, np.ones(shape=(3, 3), dtype=np.uint8), iterations=1)],
+            "shape": (H, W, C),
+        }
 
 
 class Depth(Annotation):
@@ -181,7 +185,7 @@ class Depth(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [detected_map], "shape": (H, W, C)}
 
 
 class Normal(Annotation):
@@ -216,7 +220,7 @@ class Normal(Annotation):
         control = torch.from_numpy(detected_map[:, :, ::-1].copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [detected_map], "shape": (H, W, C)}
 
 
 class Openpose(Annotation):
@@ -248,7 +252,7 @@ class Openpose(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [detected_map], "shape": (H, W, C)}
 
 
 class Seg(Annotation):
@@ -272,7 +276,7 @@ class Seg(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [detected_map], "shape": (H, W, C)}
 
 
 class Scribble(Annotation):
@@ -293,4 +297,4 @@ class Scribble(Annotation):
         control = torch.from_numpy(detected_map.copy()).float() / 255.0
         control = torch.stack([control for _ in range(num_samples)], dim=0)
         control = einops.rearrange(control, "b h w c -> b c h w").clone()
-        return {"control": control, "detected_map": detected_map, "shape": (H, W, C)}
+        return {"control": control, "detected_map": [255 - detected_map], "shape": (H, W, C)}

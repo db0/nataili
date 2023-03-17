@@ -15,6 +15,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import contextlib
+
 import numpy as np
 from PIL import Image
 
@@ -36,7 +38,8 @@ class esrgan(PostProcessor):
         :param kwargs: strength
         :return: PIL Image
         """
-        output, _ = self.model["model"].enhance(img_array)
+        with contextlib.redirect_stdout(None):
+            output, _ = self.model["model"].enhance(img_array)
         output_array = np.array(output)
         output_image = Image.fromarray(output_array)
         return output_image
