@@ -106,7 +106,7 @@ class DiffusersModelManager(BaseModelManager):
             try:
                 pipe = StableDiffusionInpaintPipeline.from_pretrained(
                     model_path,
-                    revision="fp16" if half_precision else None,
+                    revision=None,
                     torch_dtype=torch.float16 if half_precision else None,
                     use_auth_token=self.models[model_name]["hf_auth"],
                 )
