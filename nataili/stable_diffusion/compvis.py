@@ -26,6 +26,8 @@ import k_diffusion as K
 import numpy as np
 import skimage
 import torch
+torch.backends.cudnn.enabled = False
+
 from einops import rearrange
 from PIL import Image, ImageOps
 from slugify import slugify
