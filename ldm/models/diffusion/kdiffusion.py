@@ -1,7 +1,6 @@
 import einops
 import k_diffusion as K
 import torch
-torch.backends.cudnn.enabled = False
 import torch.nn as nn
 import warnings
 from nataili import disable_progress
