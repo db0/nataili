@@ -107,6 +107,22 @@ class EsrganModelManager(BaseModelManager):
                 num_block=23,
                 num_grow_ch=32,
                 scale=2,
+            ),            
+            "NKMD_Siax": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
+            ),
+            "4x_AnimeSharp": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
             ),
         }
         model_path = self.get_model_files(model_name)[0]["path"]
