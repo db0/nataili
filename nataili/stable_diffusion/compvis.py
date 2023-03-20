@@ -488,7 +488,7 @@ class CompVis:
                     )
                 else:
                     logger.info(
-                        f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                        f"Processed {self.model_name} img2img @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
                     )
                 return samples_ddim
 
@@ -528,7 +528,7 @@ class CompVis:
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
-                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                    f"Processed {self.model_name} txt2img @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
                 )
                 return samples_ddim
 
