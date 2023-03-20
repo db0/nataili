@@ -105,7 +105,7 @@ def rewrite_a1111_style_weights(prompt):
         return prompt
 
     # Rewrite for ( and ) trains
-    prompt = rewrite_for_char(prompt, open_char="(", close_char=")", max_chars=5, weight_basis=1.1)
+    prompt = rewrite_for_char(prompt, open_char="(", close_char=")", max_chars=5, weight_basis=1.05)
     # Rewrite for [ and ] trains
     prompt = rewrite_for_char(prompt, open_char="[", close_char="]", max_chars=5, weight_basis=0.9)
 

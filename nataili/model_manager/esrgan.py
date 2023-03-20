@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
+from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
@@ -134,13 +135,24 @@ class EsrganModelManager(BaseModelManager):
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         logger.info(f"Loading model {model_name} on {device}")
         logger.info(f"Model path: {model_path}")
-        model = RealESRGANer(
-            scale=4,
-            model_path=model_path,
-            model=RealESRGAN_models[self.models[model_name]["name"]],
-            tile=512,
-            half=True if half_precision else False,
-            device=device,
-            gpu_id=gpu_id,
-        )
+        if "Real" in model_name:
+            model = RealESRGANer(
+                scale=4,
+                model_path=model_path,
+                model=RealESRGAN_models[self.models[model_name]["name"]],
+                tile=512,
+                half=True if half_precision else False,
+                device=device,
+                gpu_id=gpu_id,
+            )
+        else:
+            model = SRVGGNetCompact(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_conv=32,
+                upscale=4,
+            )
+            model.eval()
+            model.to(device)
         return {"model": model, "device": device, "half_precision": half_precision}
