@@ -48,7 +48,7 @@ class esrgan(PostProcessor):
                 output_array = np.array(output)
                 output_image = Image.fromarray(output_array)
             except:
-                output_image = self.esrgan_upscale(self.model["model"], img)
+                output_image = self.esrgan_upscale(model=self.model["model"], img=img)
         return output_image
     
     def esrgan_enhance(self, model, img):
@@ -67,7 +67,7 @@ class esrgan(PostProcessor):
 
 
     def esrgan_upscale(self, model, img):
-        grid = self.split_grid(img)
+        grid = self.split_grid(img, 512, 512, 64)
         newtiles = []
         scale_factor = 1
 
@@ -76,7 +76,7 @@ class esrgan(PostProcessor):
             for tiledata in row:
                 x, w, tile = tiledata
 
-                output = self.esrgan_enhance(self, model, tile)
+                output = self.esrgan_enhance(model=model, img=tile)
                 scale_factor = output.width // tile.width
 
                 newrow.append([x * scale_factor, w * scale_factor, output])
