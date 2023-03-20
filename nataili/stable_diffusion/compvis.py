@@ -217,6 +217,7 @@ class CompVis:
                 and self.model_name != "pix2pix"
             ):
                 sampler_name = "DDIM"
+                init_img = resize_image(resize_mode, init_img, width, height)
                 low_vram(
                     [
                         (model, "cpu"),
