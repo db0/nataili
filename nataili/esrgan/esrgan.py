@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import contextlib
+import torch
 
 import numpy as np
 from PIL import Image
@@ -39,7 +40,25 @@ class esrgan(PostProcessor):
         :return: PIL Image
         """
         with contextlib.redirect_stdout(None):
-            output, _ = self.model["model"].enhance(img_array)
-        output_array = np.array(output)
-        output_image = Image.fromarray(output_array)
+            try:
+                output, _ = self.model["model"].enhance(img_array)
+                output_array = np.array(output)
+                output_image = Image.fromarray(output_array)
+            except:
+                output = self.esrgan_enhance(self.model["model"], img_array)
         return output_image
+    
+    def esrgan_enhance(self, model, img):
+        img = img[:, :, ::-1]
+        img = np.ascontiguousarray(np.transpose(img, (2, 0, 1))) / 255
+        img = torch.from_numpy(img).float()
+        img = img.unsqueeze(0).to(self.model["device"])
+        with torch.no_grad():
+            output = model(img)
+        output = output.squeeze().float().cpu().clamp_(0, 1).numpy()
+        output = 255. * np.moveaxis(output, 0, 2)
+        output = output.astype(np.uint8)
+        output = output[:, :, ::-1]
+        return Image.fromarray(output, 'RGB')
+
+  
