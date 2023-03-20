@@ -76,7 +76,7 @@ class esrgan(PostProcessor):
             for tiledata in row:
                 x, w, tile = tiledata
 
-                output = self.esrgan_enhance(model, tile)
+                output = self.esrgan_enhance(self, model, tile)
                 scale_factor = output.width // tile.width
 
                 newrow.append([x * scale_factor, w * scale_factor, output])
