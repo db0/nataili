@@ -150,7 +150,7 @@ class EsrganModelManager(BaseModelManager):
                 num_in_ch=3,
                 num_out_ch=3,
                 num_feat=64,
-                num_conv=16,
+                num_conv=32,
                 upscale=4,
             )
             model.eval()
