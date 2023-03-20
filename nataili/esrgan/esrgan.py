@@ -67,7 +67,7 @@ class esrgan(PostProcessor):
 
 
     def esrgan_upscale(self, model, img):
-        grid = self.split_grid(img, 512, 512, 64)
+        grid = self.split_grid(image=img, tile_w=512, tile_h=512, overlap=64)
         newtiles = []
         scale_factor = 1
 
@@ -83,7 +83,7 @@ class esrgan(PostProcessor):
             newtiles.append([y * scale_factor, h * scale_factor, newrow])
 
         newgrid = Grid(newtiles, grid.tile_w * scale_factor, grid.tile_h * scale_factor, grid.image_w * scale_factor, grid.image_h * scale_factor, grid.overlap * scale_factor)
-        output = self.combine_grid(newgrid)
+        output = self.combine_grid(grid=newgrid)
         return output
 
     def split_grid(image, tile_w=512, tile_h=512, overlap=64):
