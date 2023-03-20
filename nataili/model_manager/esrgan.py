@@ -151,7 +151,7 @@ class EsrganModelManager(BaseModelManager):
                 num_out_ch=3,
                 num_feat=64,
                 num_conv=32,
-                upscale=2,
+                upscale=4,
             )
             model.eval()
             model.to(device)
