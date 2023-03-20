@@ -108,7 +108,7 @@ class EsrganModelManager(BaseModelManager):
                 num_grow_ch=32,
                 scale=2,
             ),
-            "NKMD_Siax": RRDBNet(
+            "NMKD_Siax": RRDBNet(
                 num_in_ch=3,
                 num_out_ch=3,
                 num_feat=64,
