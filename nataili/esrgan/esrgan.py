@@ -53,7 +53,7 @@ class esrgan(PostProcessor):
     
 
     def esrgan_upscale(self, model, input_img):
-        def esrgan_enhance(self, model, img):
+        def esrgan_enhance(model, img):
             img = np.array(img)
             img = img[:, :, ::-1]
             img = np.ascontiguousarray(np.transpose(img, (2, 0, 1))) / 255
