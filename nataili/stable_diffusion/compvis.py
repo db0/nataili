@@ -26,7 +26,6 @@ import k_diffusion as K
 import numpy as np
 import skimage
 import torch
-
 from einops import rearrange
 from PIL import Image, ImageOps
 from slugify import slugify
