@@ -215,6 +215,7 @@ class CompVis:
                 and self.model_name != "pix2pix"
             ):
                 sampler_name = "DDIM"
+                init_img = resize_image(resize_mode, init_img, width, height)
                 low_vram(
                     [
                         (model, "cpu"),
@@ -481,9 +482,14 @@ class CompVis:
                         unconditional_conditioning=unconditional_conditioning,
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
-                logger.info(
-                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
-                )
+                if hires_fix:
+                    logger.info(
+                        f"Processed {self.model_name} HiRes-Fix @ {final_width}x{final_height} for {t_enc_steps} iterations at {its} it/s"
+                    )
+                else:
+                    logger.info(
+                        f"Processed {self.model_name} img2img @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                    )
                 return samples_ddim
 
             def sample(
@@ -522,7 +528,7 @@ class CompVis:
                     )
                 its = round(ddim_steps / (time.time() - start_sampling), 2)
                 logger.info(
-                    f"Processed {self.model_name} @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
+                    f"Processed {self.model_name} txt2img @ {width}x{height} for {ddim_steps} iterations at {its} it/s"
                 )
                 return samples_ddim
 
