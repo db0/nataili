@@ -48,7 +48,7 @@ class esrgan(PostProcessor):
                 output_array = np.array(output)
                 output_image = Image.fromarray(output_array)
             except:
-                output_image = self.esrgan_upscale(model=self.model["model"], img=img)
+                output_image = self.esrgan_upscale(model=self.model["model"], input_img=img)
         return output_image
     
 
