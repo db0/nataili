@@ -48,10 +48,11 @@ class esrgan(PostProcessor):
                 output_array = np.array(output)
                 output_image = Image.fromarray(output_array)
             except:
-                output_image = self.esrgan_upscale(self.model["model"], img_array)
+                output_image = self.esrgan_upscale(self.model["model"], img)
         return output_image
     
     def esrgan_enhance(self, model, img):
+        img = np.array(img)
         img = img[:, :, ::-1]
         img = np.ascontiguousarray(np.transpose(img, (2, 0, 1))) / 255
         img = torch.from_numpy(img).float()
