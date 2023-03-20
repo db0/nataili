@@ -135,7 +135,7 @@ class EsrganModelManager(BaseModelManager):
             device = torch.device(f"cuda:{gpu_id}" if self.cuda_available else "cpu")
         logger.info(f"Loading model {model_name} on {device}")
         logger.info(f"Model path: {model_path}")
-        if "Real" in RealESRGAN_models[self.models[model_name]["name"]]:
+        if "Real" in model_name:
             model = RealESRGANer(
                 scale=4,
                 model_path=model_path,
