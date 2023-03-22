@@ -109,6 +109,7 @@ class EsrganModelManager(BaseModelManager):
                 "num_grow_ch": 32,
                 "scale": 2,
             },
+
         }
 
         model_path = self.get_model_files(model_name)[0]["path"]

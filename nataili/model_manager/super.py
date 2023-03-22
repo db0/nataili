@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import torch
 
 from nataili.util.logger import logger
+from nataili.util.voodoo import initialise_voodoo
 
 
 class ModelManager:
@@ -40,6 +41,7 @@ class ModelManager:
         codeformer: bool = False,
         controlnet: bool = False,
     ):
+        initialise_voodoo()
         if aitemplate:
             from nataili.model_manager.aitemplate import AITemplateModelManager
 

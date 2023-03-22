@@ -34,21 +34,28 @@ from nataili.util.logger import logger
 warnings.filterwarnings("ignore")
 
 
-MODEL_CACHE_DIR = os.path.join(os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray")), "model-cache")
-
-
-if enable_local_ray_temp.active:
-    ray_temp_dir = os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
-    session_dirs = glob.glob(os.path.join(ray_temp_dir, "session_*"))
-    for adir in session_dirs:
-        shutil.rmtree(adir, ignore_errors=True)
-    os.makedirs(ray_temp_dir, exist_ok=True)
-    ray.init(_temp_dir=ray_temp_dir)
-    logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
-else:
-    logger.init_warn("Ray temp dir'", status="OS Default")
-
 T = TypeVar("T")
+
+
+def get_ray_temp_dir():
+    return os.path.abspath(os.environ.get("RAY_TEMP_DIR", "./ray"))
+
+
+def get_model_cache_dir():
+    return os.path.join(get_ray_temp_dir(), "model-cache")
+
+
+def initialise_voodoo():
+    if enable_local_ray_temp.active:
+        ray_temp_dir = get_ray_temp_dir()
+        session_dirs = glob.glob(os.path.join(ray_temp_dir, "session_*"))
+        for adir in session_dirs:
+            shutil.rmtree(adir, ignore_errors=True)
+        os.makedirs(ray_temp_dir, exist_ok=True)
+        ray.init(_temp_dir=ray_temp_dir)
+        logger.init(f"Ray temp dir '{ray_temp_dir}'", status="Prepared")
+    else:
+        logger.init_warn("Ray temp dir'", status="OS Default")
 
 
 def extract_tensors(m: torch.nn.Module) -> Tuple[torch.nn.Module, List[Dict]]:
@@ -84,7 +91,7 @@ def replace_tensors(m: torch.nn.Module, tensors: List[Dict], device="cuda"):
 
 
 def get_model_cache_filename(model_filename):
-    return os.path.join(MODEL_CACHE_DIR, os.path.basename(model_filename)) + ".cache"
+    return os.path.join(get_model_cache_dir(), os.path.basename(model_filename)) + ".cache"
 
 
 def have_model_cache(model_filename):
@@ -131,8 +138,8 @@ def push_model_to_plasma(model: torch.nn.Module, filename="") -> ray.ObjectRef:
         if have_model_cache(cachefile):
             return cachefile
         # Create cache directory if it doesn't already exist
-        if not os.path.isdir(MODEL_CACHE_DIR):
-            os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+        if not os.path.isdir(get_model_cache_dir()):
+            os.makedirs(get_model_cache_dir(), exist_ok=True)
         # Serialise our object
         with open(cachefile, "wb") as cache:
             pickle.dump(extract_tensors(model), cache, protocol=pickle.HIGHEST_PROTOCOL)
