@@ -85,32 +85,47 @@ class EsrganModelManager(BaseModelManager):
         cpu_only=False,
     ):
         RealESRGAN_models = {
-            "RealESRGAN_x4plus": {
-                "num_in_ch": 3,
-                "num_out_ch": 3,
-                "num_feat": 64,
-                "num_block": 23,
-                "num_grow_ch": 32,
-                "scale": 4,
-            },
-            "RealESRGAN_x4plus_anime_6B": {
-                "num_in_ch": 3,
-                "num_out_ch": 3,
-                "num_feat": 64,
-                "num_block": 6,
-                "num_grow_ch": 32,
-                "scale": 4,
-            },
-            "RealESRGAN_x2plus": {
-                "num_in_ch": 3,
-                "num_out_ch": 3,
-                "num_feat": 64,
-                "num_block": 23,
-                "num_grow_ch": 32,
-                "scale": 2,
-            },
+            "RealESRGAN_x4plus": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
+            ),
+            "RealESRGAN_x4plus_anime_6B": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=6,
+                num_grow_ch=32,
+                scale=4,
+            ),
+            "RealESRGAN_x2plus": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=2,
+            ),
+            "NMKD_Siax": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
+            ),
+            "4x_AnimeSharp": RRDBNet(
+                num_in_ch=3,
+                num_out_ch=3,
+                num_feat=64,
+                num_block=23,
+                num_grow_ch=32,
+                scale=4,
+            ),
         }
-
         model_path = self.get_model_files(model_name)[0]["path"]
         model_path = f"{self.path}/{model_path}"
         if cpu_only:
@@ -121,18 +136,10 @@ class EsrganModelManager(BaseModelManager):
         logger.info(f"Loading model {model_name} on {device}")
         logger.info(f"Model path: {model_path}")
         if "Real" in model_name:
-            rrdb = RRDBNet(
-                num_in_ch=RealESRGAN_models[self.models[model_name]["name"]]["num_in_ch"],
-                num_out_ch=RealESRGAN_models[self.models[model_name]["name"]]["num_out_ch"],
-                num_feat=RealESRGAN_models[self.models[model_name]["name"]]["num_feat"],
-                num_block=RealESRGAN_models[self.models[model_name]["name"]]["num_block"],
-                num_grow_ch=RealESRGAN_models[self.models[model_name]["name"]]["num_grow_ch"],
-                scale=RealESRGAN_models[self.models[model_name]["name"]]["scale"],
-            )
             model = RealESRGANer(
-                scale=RealESRGAN_models[self.models[model_name]["name"]]["scale"],
+                scale=4,
                 model_path=model_path,
-                model=rrdb,
+                model=RealESRGAN_models[self.models[model_name]["name"]],
                 tile=512,
                 half=True if half_precision else False,
                 device=device,
