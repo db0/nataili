@@ -140,7 +140,6 @@ class EsrganModelManager(BaseModelManager):
                 scale=4,
                 model_path=model_path,
                 model=RealESRGAN_models[self.models[model_name]["name"]],
-                tile=512,
                 half=True if half_precision else False,
                 device=device,
                 gpu_id=gpu_id,
