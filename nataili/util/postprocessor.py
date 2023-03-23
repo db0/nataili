@@ -51,8 +51,13 @@ class PostProcessor:
 
     def parse_image(self, input_image, input_path):
         img = None
+        # Apply fix from hlky to resolve issue with P type images
         if input_image is not None:
             img = input_image
+            if img.mode == "P" and input_path.lower().endswith(".png"):
+                img = img.convert("RGBA")
+            else:
+                img = img.convert(img.mode)
             img_array = np.array(img)
         elif input_path is not None:
             img = PIL.Image.open(input_path)
