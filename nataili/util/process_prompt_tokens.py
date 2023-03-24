@@ -25,7 +25,7 @@ from nataili import disable_download_progress
 from nataili.cache import get_cache_directory
 from nataili.model_manager.base import BaseModelManager
 from nataili.train.lora.lora import LoRA
-from nataili.util.load_learned_embed_in_clip import load_learned_embed_in_clip
+from nataili.util.load_learned_embed_in_clip import load_learned_embed_in_clip, load_learned_embed_in_clip_v2
 from nataili.util.logger import logger
 from nataili.util.lora import load_lora_for_models
 
@@ -123,6 +123,14 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
                     if model_baseline == "stable diffusion 1":
                         load_learned_embed_in_clip(
                             f"{os.path.join(embed_manager.path, embedding_path)}",
+                            text_encoder,
+                            tokenizer,
+                            token_name
+                        )
+                    else:
+                        load_learned_embed_in_clip_v2(
+                            f"{os.path.join(embed_manager.path, embedding_path)}",
+                            model,
                             text_encoder,
                             tokenizer,
                             token_name
