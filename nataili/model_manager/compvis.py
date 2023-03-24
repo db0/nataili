@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 import open_clip
+import safetensors.torch
 import torch
 import transformers.utils.hub
 from omegaconf import OmegaConf
@@ -44,7 +45,7 @@ class CompVisModelManager(BaseModelManager):
         self.models_db_name = "stable_diffusion"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (
-            f"https://raw.githubusercontent.com/db0/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
+            f"https://raw.githubusercontent.com/ResidentChief/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
         )
         self.init()
 
@@ -89,10 +90,13 @@ class CompVisModelManager(BaseModelManager):
 
     def load_model_from_config(self, model_path="", config_path="", map_location="cpu"):
         config = OmegaConf.load(config_path)
-        pl_sd = torch.load(model_path, map_location=map_location)
-        if "global_step" in pl_sd:
-            logger.info(f"Global Step: {pl_sd['global_step']}")
-        sd = pl_sd["state_dict"] if "state_dict" in pl_sd else pl_sd
+        if model_path.lower().endswith(".safetensors"):
+            sd = safetensors.torch.load_file(model_path, device=map_location)
+        else:
+            pl_sd = torch.load(model_path, map_location=map_location)
+            if "global_step" in pl_sd:
+                logger.info(f"Global Step: {pl_sd['global_step']}")
+            sd = pl_sd["state_dict"] if "state_dict" in pl_sd else pl_sd
 
         sd1_clip_weight = "cond_stage_model.transformer.text_model.embeddings.token_embedding.weight"
         sd2_clip_weight = "cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight"
