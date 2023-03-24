@@ -31,7 +31,7 @@ from nataili.util.lora import load_lora_for_models
 
 class EmbedsManager:
     def __init__(self,
-        remote_db = "https://raw.githubusercontent.com/db0/AI-Horde-image-model-reference/main/db_embeds.json",
+        remote_db = "https://raw.githubusercontent.com/ResidentChief/AI-Horde-image-model-reference/main/db_embeds.json",
         path = None,
         all_embeds = [],
     ):
