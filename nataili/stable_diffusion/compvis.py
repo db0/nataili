@@ -600,11 +600,16 @@ class CompVis:
                     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                         m.padding_mode = "circular" if tiling else m._orig_padding_mode
             sampler = create_sampler_by_sampler_name(model if control_type is None else self.control_net_model)
-            if self.load_concepts and self.concepts_dir is not None:
+            if self.load_concepts:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-_]+)>", prompt)
                 if prompt_tokens:
                     process_prompt_tokens(
                         prompt_tokens, model if control_type is None else self.control_net_model, self.model_baseline
+                    )
+                neg_prompt_tokens = re.findall("<([a-zA-Z0-9-_]+)>", negprompt)
+                if neg_prompt_tokens:
+                    process_prompt_tokens(
+                        neg_prompt_tokens, model if control_type is None else self.control_net_model, self.model_baseline
                     )
 
             all_prompts = batch_size * n_iter * [prompt]
