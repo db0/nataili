@@ -107,12 +107,16 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             # text_encoder.get_input_embeddings().weight.data[token_id] = embed
             # text_encoder.set_input_embeddings()
 
+            print(f"Token = {token}")
+            token_id = tokenizer.convert_tokens_to_ids(token)
+            print(f"Token ID = {token_id}")
             current_embeds = text_encoder.get_input_embeddings()
             next_new_token = token_dict_size = current_embeds.weight.shape[0]
             tokens_temp = []
             out_tokens = []
             embedding_weights = []
-            for y in token:
+            for y in token_id:
+                print (f"Y = {y}")
                 if isinstance(y, int):
                     tokens_temp += [y]
                 else:
@@ -120,6 +124,7 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
                     tokens_temp += [next_new_token]
                     next_new_token += 1
             out_tokens += [tokens_temp]
+            print(embedding_weights)
             if len(embedding_weights) > 0:
                 new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
                 new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
