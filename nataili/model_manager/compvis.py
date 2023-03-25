@@ -93,11 +93,10 @@ class CompVisModelManager(BaseModelManager):
         if model_path.lower().endswith(".safetensors"):
             sd = safetensors.torch.load_file(model_path, device=map_location)
         else:
-            pl_sd = torch.load(model_path, map_location=map_location)
-            if "global_step" in pl_sd:
-                logger.info(f"Global Step: {pl_sd['global_step']}")
-            sd = pl_sd["state_dict"] if "state_dict" in pl_sd else pl_sd
-            del pl_sd
+            sd = torch.load(model_path, map_location=map_location)
+            if "global_step" in sd:
+                logger.info(f"Global Step: {sd['global_step']}")
+            sd = sd["state_dict"] if "state_dict" in sd else sd
 
         sd1_clip_weight = "cond_stage_model.transformer.text_model.embeddings.token_embedding.weight"
         sd2_clip_weight = "cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight"
