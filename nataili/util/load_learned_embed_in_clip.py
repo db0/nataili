@@ -79,13 +79,12 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             #         print(f"WARNING: Unable to add token {token} to tokenizer. Too many instances? Skipping addition!")
             #         continue
             current_embeds = text_encoder.get_input_embeddings()
-            # resize the token embeddings
-            text_encoder.resize_token_embeddings(len(tokenizer))
             # get the id for the token and assign the embed
             token_id = tokenizer.convert_tokens_to_ids(token)
-            new_embedding = torch.nn.Embedding(len(tokenizer), current_embeds.weight.shape[1])
-            new_embedding.weight[:len(tokenizer)] = current_embeds.weight[:]
-            new_embedding.weight[len(tokenizer)] = embed
+            new_embedding = torch.nn.Embedding(token_id, current_embeds.weight.shape[1])
+            new_embedding.weight[:token_id] = current_embeds.weight[:]
+            new_embedding.weight[token_id] = embed
+            new_embedding = new_embedding.cuda()
             text_encoder.set_input_embeddings(new_embedding)
 
             # print(f"Token = {token}")
