@@ -67,7 +67,7 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
                     sd2_clip = "SD_2.x" #"OpenCLIP-ViT/H, SD_2.x"
                     raise RuntimeError(f"Text encoder: {sd1_clip if encoder_shape[0] == 768 else sd2_clip}, embed: {sd1_clip if embed.shape[0] == 768 else sd2_clip}")
                 raise RuntimeError(f"Incompatible: embed shape {embed.shape} does not match text encoder shape {text_encoder.get_input_embeddings().weight.data[0].shape}")
-            num_added_tokens = tokenizer.add_tokens(token)
+            #num_added_tokens = tokenizer.add_tokens(token)
             # if num_added_tokens == 0:
             #     # simply attempt to add the token with a number suffix
             #     for i in range(0, 256):
