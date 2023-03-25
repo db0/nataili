@@ -274,15 +274,87 @@ def model_lora_keys(model, key_map={}):
 
     return key_map
 
+class ModelPatcher:
+    def __init__(self, model):
+        self.model = model
+        self.patches = []
+        self.backup = {}
+
+    def clone(self):
+        n = ModelPatcher(self.model)
+        n.patches = self.patches[:]
+        return n
+
+    def add_patches(self, patches, strength=1.0):
+        p = {}
+        model_sd = self.model.state_dict()
+        for k in patches:
+            if k in model_sd:
+                p[k] = patches[k]
+        self.patches += [(strength, p)]
+        return p.keys()
+
+    def patch_model(self):
+        model_sd = self.model.state_dict()
+        for p in self.patches:
+            for k in p[1]:
+                v = p[1][k]
+                key = k
+                if key not in model_sd:
+                    print("could not patch. key doesn't exist in model:", k)
+                    continue
+
+                weight = model_sd[key]
+                if key not in self.backup:
+                    self.backup[key] = weight.clone()
+
+                alpha = p[0]
+
+                if len(v) == 4: #lora/locon
+                    mat1 = v[0]
+                    mat2 = v[1]
+                    if v[2] is not None:
+                        alpha *= v[2] / mat2.shape[0]
+                    if v[3] is not None:
+                        #locon mid weights, hopefully the math is fine because I didn't properly test it
+                        final_shape = [mat2.shape[1], mat2.shape[0], v[3].shape[2], v[3].shape[3]]
+                        mat2 = torch.mm(mat2.transpose(0, 1).flatten(start_dim=1).float(), v[3].transpose(0, 1).flatten(start_dim=1).float()).reshape(final_shape).transpose(0, 1)
+                    weight += (alpha * torch.mm(mat1.flatten(start_dim=1).float(), mat2.flatten(start_dim=1).float())).reshape(weight.shape).type(weight.dtype).to(weight.device)
+                else: #loha
+                    w1a = v[0]
+                    w1b = v[1]
+                    if v[2] is not None:
+                        alpha *= v[2] / w1b.shape[0]
+                    w2a = v[3]
+                    w2b = v[4]
+                    if v[5] is not None: #cp decomposition
+                        t1 = v[5]
+                        t2 = v[6]
+                        m1 = torch.einsum('i j k l, j r, i p -> p r k l', t1.float(), w1b.float(), w1a.float())
+                        m2 = torch.einsum('i j k l, j r, i p -> p r k l', t2.float(), w2b.float(), w2a.float())
+                    else:
+                        m1 = torch.mm(w1a.float(), w1b.float())
+                        m2 = torch.mm(w2a.float(), w2b.float())
+
+                    weight += (alpha * m1 * m2).reshape(weight.shape).type(weight.dtype).to(weight.device)
+        return self.model
+    def unpatch_model(self):
+        model_sd = self.model.state_dict()
+        keys = list(self.backup.keys())
+        for k in keys:
+            model_sd[k][:] = self.backup[k]
+            del self.backup[k]
+
+        self.backup = {}
+
+
 def load_lora_for_models(model, clip, lora_path, strength_model, strength_clip):
     key_map = model_lora_keys(model.model)
     key_map = model_lora_keys(clip, key_map)
     loaded = load_lora(lora_path, key_map)
-    new_modelpatcher = model
-    new_modelpatcher = new_modelpatcher.cuda()
+    new_modelpatcher = ModelPatcher(model)
     k = new_modelpatcher.add_patches(loaded, strength_model)
-    new_clip = clip
-    new_clip = new_clip.cuda()
+    new_clip = ModelPatcher(clip)
     k1 = new_clip.add_patches(loaded, strength_clip)
     k = set(k)
     k1 = set(k1)
