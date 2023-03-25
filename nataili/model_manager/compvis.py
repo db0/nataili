@@ -114,6 +114,7 @@ class CompVisModelManager(BaseModelManager):
             model = instantiate_from_config(config.model)
 
         m, u = model.load_state_dict(sd, strict=False)
+        # Patch model to allow LoRAs
         k = list(sd.keys())
         for x in k:
             # print(x)
