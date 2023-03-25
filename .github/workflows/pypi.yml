@@ -2,15 +2,42 @@ name: Nataili build and publish
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+
 jobs:
   build-n-publish:
     name: Nataili build and publish
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Set up Python 3.10
+    - name: "✔️ Checkout"
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: "📣 Release on push"
+      id: release
+      uses: rymndhng/release-on-push-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        bump_version_scheme: norelease
+        use_github_release_notes: true
+    - name: "✏️ Generate release changelog"
+      if: ${{ steps.release.outputs.version != '' }}
+      uses: heinrichreimer/github-changelog-generator-action@v2.3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - name: "💾 Commit new version"
+      if: ${{ steps.release.outputs.version != '' }}
+      run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.release.outputs.version }}"/g' ./pyproject.toml
+          sed -i 's/version = .*/version = "${{ steps.release.outputs.version }}"/g' ./setup.cfg
+          sed -i 's/version=".*"/version="${{ steps.release.outputs.version }}"/g' ./setup.py
+          git config user.email github-actions@github.com
+          git config user.name github-actions
+          git commit -am 'version incremented'
+          git push
+    - name: "🐍 Set up Python 3.10"
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
@@ -20,7 +47,7 @@ jobs:
         pip install
         build
         --user
-    - name: Build a binary wheel and a source tarball
+    - name: "🔧 Build a binary wheel and a source tarball"
       run: >-
         python -m
         build
@@ -28,7 +55,7 @@ jobs:
         --wheel
         --outdir dist/
         .
-    - name: Publish distribution 📦 to PyPI
+    - name: "📦 Publish distribution to PyPI"
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
