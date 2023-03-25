@@ -97,6 +97,7 @@ class CompVisModelManager(BaseModelManager):
             if "global_step" in pl_sd:
                 logger.info(f"Global Step: {pl_sd['global_step']}")
             sd = pl_sd["state_dict"] if "state_dict" in pl_sd else pl_sd
+            del pl_sd
 
         sd1_clip_weight = "cond_stage_model.transformer.text_model.embeddings.token_embedding.weight"
         sd2_clip_weight = "cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight"
@@ -118,7 +119,7 @@ class CompVisModelManager(BaseModelManager):
         for m in model.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                 m._orig_padding_mode = m.padding_mode
-        del pl_sd, sd, m, u
+        del sd, m, u
         return model
 
     def load_custom(self, ckpt_path, config_path, model_name=None, replace=False):
