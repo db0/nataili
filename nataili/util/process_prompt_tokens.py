@@ -135,14 +135,14 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
                             tokenizer,
                             token_name
                         )
-                elif embedding_type == "LoRA":
-                    model, tokenizer = load_lora_for_models(
-                        model, 
-                        tokenizer, 
-                        f"{os.path.join(embed_manager.path, embedding_path)}",
-                        1,
-                        1
-                    )
+            elif embedding_type == "LoRA":
+                model, tokenizer = load_lora_for_models(
+                    model, 
+                    tokenizer, 
+                    f"{os.path.join(embed_manager.path, embedding_path)}",
+                    1,
+                    1
+                )
             else:
                 logger.info(f"Embedding for {token_name} is for {embedding_baseline}; Model loaded is based on {model_baseline}")
         else:
