@@ -23,7 +23,7 @@ Some of the technologies included in Nataili are:
 
 ## Projects using Nataili
 
-* [Stable Horde worker](https://github.com/db0/AI-Horde-Worker)
+* [AI Horde worker](https://github.com/db0/AI-Horde-Worker)
 
 ## Installation
 
@@ -32,7 +32,7 @@ Some of the technologies included in Nataili are:
 From source:
 
 ```
-git clone https://github.com/Sygil-Dev/nataili
+git clone https://github.com/db0/nataili
 cd nataili
 pip install -e .
 ```
