@@ -23,6 +23,32 @@ import torch
 
 def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, token=None):
     
+    def set_up_textual_embeddings(self, tokens, current_embeds):
+        out_tokens = []
+        next_new_token = token_dict_size = current_embeds.weight.shape[0]
+        embedding_weights = []
+
+        for x in tokens:
+            tokens_temp = []
+            for y in x:
+                if isinstance(y, int):
+                    tokens_temp += [y]
+                else:
+                    embedding_weights += [y]
+                    tokens_temp += [next_new_token]
+                    next_new_token += 1
+            out_tokens += [tokens_temp]
+
+        if len(embedding_weights) > 0:
+            new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
+            new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
+            n = token_dict_size
+            for x in embedding_weights:
+                new_embedding.weight[n] = x
+                n += 1
+            self.transformer.set_input_embeddings(new_embedding)
+        return out_tokens
+
     loaded_learned_embeds = torch.load(learned_embeds_path, map_location="cpu")
     # separate token and the embeds
     if learned_embeds_path.endswith(".pt"):
@@ -63,22 +89,48 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
                     sd2_clip = "SD_2.x" #"OpenCLIP-ViT/H, SD_2.x"
                     raise RuntimeError(f"Text encoder: {sd1_clip if encoder_shape[0] == 768 else sd2_clip}, embed: {sd1_clip if embed.shape[0] == 768 else sd2_clip}")
                 raise RuntimeError(f"Incompatible: embed shape {embed.shape} does not match text encoder shape {text_encoder.get_input_embeddings().weight.data[0].shape}")
-            num_added_tokens = tokenizer.add_tokens(token)
-            if num_added_tokens == 0:
-                # simply attempt to add the token with a number suffix
-                for i in range(0, 256):
-                    if num_added_tokens == 0:
-                        num_added_tokens = tokenizer.add_tokens(f"{token}{i}")
-                    else:
-                        break
-                if num_added_tokens == 0:
-                    print(f"WARNING: Unable to add token {token} to tokenizer. Too many instances? Skipping addition!")
-                    continue
-            # resize the token embeddings
-            text_encoder.resize_token_embeddings(len(tokenizer))
-            # get the id for the token and assign the embed
-            token_id = tokenizer.convert_tokens_to_ids(token)
-            text_encoder.get_input_embeddings().weight.data[token_id] = embed
+            # num_added_tokens = tokenizer.add_tokens(token)
+            # if num_added_tokens == 0:
+            #     # simply attempt to add the token with a number suffix
+            #     for i in range(0, 256):
+            #         if num_added_tokens == 0:
+            #             num_added_tokens = tokenizer.add_tokens(f"{token}{i}")
+            #         else:
+            #             break
+            #     if num_added_tokens == 0:
+            #         print(f"WARNING: Unable to add token {token} to tokenizer. Too many instances? Skipping addition!")
+            #         continue
+            # # resize the token embeddings
+            # text_encoder.resize_token_embeddings(len(tokenizer))
+            # # get the id for the token and assign the embed
+            # token_id = tokenizer.convert_tokens_to_ids(token)
+            # text_encoder.get_input_embeddings().weight.data[token_id] = embed
+            # text_encoder.set_input_embeddings()
+
+            current_embeds = text_encoder.get_input_embeddings()
+            next_new_token = token_dict_size = current_embeds.weight.shape[0]
+            tokens_temp = []
+            out_tokens = []
+            embedding_weights = []
+            for y in token:
+                if isinstance(y, int):
+                    tokens_temp += [y]
+                else:
+                    embedding_weights += [y]
+                    tokens_temp += [next_new_token]
+                    next_new_token += 1
+            out_tokens += [tokens_temp]
+            if len(embedding_weights) > 0:
+                new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
+                new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
+                n = token_dict_size
+                for x in embedding_weights:
+                    new_embedding.weight[n] = x
+                    n += 1
+                text_encoder.set_input_embeddings(new_embedding)
+            return out_tokens
+
+            
         except RuntimeError as e:
             print(f" (incompatible: {token}) {e}")
             return
