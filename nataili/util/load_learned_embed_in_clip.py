@@ -23,32 +23,6 @@ import torch
 
 def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, token=None):
     
-    def set_up_textual_embeddings(self, tokens, current_embeds):
-        out_tokens = []
-        next_new_token = token_dict_size = current_embeds.weight.shape[0]
-        embedding_weights = []
-
-        for x in tokens:
-            tokens_temp = []
-            for y in x:
-                if isinstance(y, int):
-                    tokens_temp += [y]
-                else:
-                    embedding_weights += [y]
-                    tokens_temp += [next_new_token]
-                    next_new_token += 1
-            out_tokens += [tokens_temp]
-
-        if len(embedding_weights) > 0:
-            new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
-            new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
-            n = token_dict_size
-            for x in embedding_weights:
-                new_embedding.weight[n] = x
-                n += 1
-            self.transformer.set_input_embeddings(new_embedding)
-        return out_tokens
-
     loaded_learned_embeds = torch.load(learned_embeds_path, map_location="cpu")
     # separate token and the embeds
     if learned_embeds_path.endswith(".pt"):
@@ -122,7 +96,8 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             print(f" (incompatible: {token}) {e}")
             return
             #print_exc()
-    return
+            
+    return ",".join(tokens)
 
 def load_learned_embed_in_clip_v2(
         learned_embeds_path, model, text_encoder, tokenizer, token=None, idempotent=False
