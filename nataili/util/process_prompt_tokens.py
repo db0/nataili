@@ -98,8 +98,8 @@ class EmbedsManager:
 
 def process_prompt_tokens(prompt_tokens, model, model_baseline):
     embed_manager = EmbedsManager()
-    new_tokens = None
-    
+    new_tokens = ""
+
     for token_name in prompt_tokens:
         print(f"Token for processing = {token_name}")
         print(f"Model baseline = {model_baseline}")
