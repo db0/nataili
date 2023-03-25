@@ -31,7 +31,7 @@ from nataili.util.lora import load_lora_for_models
 
 class EmbedsManager:
     def __init__(self,
-        remote_db = "https://raw.githubusercontent.com/ResidentChief/AI-Horde-image-model-reference/main/db_embeds.json",
+        remote_db = "https://raw.githubusercontent.com/ResidentChief/AI-Horde-image-model-reference/Updates0603/db_embeds.json",
         path = None,
         all_embeds = [],
     ):
@@ -118,7 +118,7 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
             embedding_path = embed_manager.load_embedding(token_name)
             embedding_type, embedding_baseline = embed_manager.get_embedding_info(token_name)
 
-            print(f"Embedding path = {embedding_path}")
+            print(f"Embedding path = {embedding_path}; Embedding type = {embedding_type}; Embedding baseline = {embedding_baseline}")
 
             if embedding_type == "Textual Inversion":
                 if model_baseline == "stable diffusion 1":
