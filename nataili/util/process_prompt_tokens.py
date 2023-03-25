@@ -118,23 +118,23 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
             embedding_type, embedding_baseline = embed_manager.get_embedding_info(token_name)
 
             print(f"Embedding path = {embedding_path}")
-            if model_baseline == embedding_baseline:
-                if embedding_type == "Textual Inversion":
-                    if model_baseline == "stable diffusion 1":
-                        load_learned_embed_in_clip(
-                            f"{os.path.join(embed_manager.path, embedding_path)}",
-                            text_encoder,
-                            tokenizer,
-                            token_name
-                        )
-                    else:
-                        load_learned_embed_in_clip_v2(
-                            f"{os.path.join(embed_manager.path, embedding_path)}",
-                            model,
-                            text_encoder,
-                            tokenizer,
-                            token_name
-                        )
+
+            if embedding_type == "Textual Inversion":
+                if model_baseline == "stable diffusion 1":
+                    load_learned_embed_in_clip(
+                        f"{os.path.join(embed_manager.path, embedding_path)}",
+                        text_encoder,
+                        tokenizer,
+                        token_name
+                    )
+                else:
+                    load_learned_embed_in_clip_v2(
+                        f"{os.path.join(embed_manager.path, embedding_path)}",
+                        model,
+                        text_encoder,
+                        tokenizer,
+                        token_name
+                    )
             elif embedding_type == "LoRA":
                 model, tokenizer = load_lora_for_models(
                     model, 
