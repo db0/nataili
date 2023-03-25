@@ -54,6 +54,9 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
     token = token[1 if token.startswith("<") else None:-1 if token.endswith(">") else None]
     tokens = [f"<{token}>"] if embeds.shape[0] == 1 else [f"<{token}{i}>" for i in range(embeds.shape[0])]
 
+    all_tokens = ",".join(tokens)
+    print(f"All tokens for adding = {all_tokens}")
+
     # add the token(s) in tokenizer
     for (token, embed) in zip(tokens, embeds):
         try:
@@ -101,7 +104,7 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             return
             #print_exc()
 
-    return ",".join(tokens)
+    return all_tokens
 
 def load_learned_embed_in_clip_v2(
         learned_embeds_path, model, text_encoder, tokenizer, token=None, idempotent=False
