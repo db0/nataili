@@ -78,25 +78,27 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             #     if num_added_tokens == 0:
             #         print(f"WARNING: Unable to add token {token} to tokenizer. Too many instances? Skipping addition!")
             #         continue
-            current_embeds = text_encoder.get_input_embeddings()
-            # get the id for the token and assign the embed
-            token_id = tokenizer.convert_tokens_to_ids(token)
-            new_embedding = torch.nn.Embedding(token_id, current_embeds.weight.shape[1])
-            new_embedding.weight[:token_id] = current_embeds.weight[:]
-            new_embedding.weight[token_id] = embed
-            new_embedding = new_embedding.cuda()
-            text_encoder.set_input_embeddings(new_embedding)
-
-            # print(f"Token = {token}")
-            # token_id = tokenizer.convert_tokens_to_ids(token)
-            # print(f"Token ID = {token_id}")
             # current_embeds = text_encoder.get_input_embeddings()
-            # next_new_token = token_dict_size = current_embeds.weight.shape[0]
-            # next_new_token += 1
-            # new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
-            # new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
-            # new_embedding.weight[token_dict_size] = embed
+            # # get the id for the token and assign the embed
+            # token_id = tokenizer.convert_tokens_to_ids(token)
+            # print(f"Attempting to load {token} to {token_id}")
+            # new_embedding = torch.nn.Embedding(token_id, current_embeds.weight.shape[1])
+            # new_embedding.weight[:token_id] = current_embeds.weight[:]
+            # new_embedding.weight[token_id] = embed
+            # new_embedding = new_embedding.cuda()
             # text_encoder.set_input_embeddings(new_embedding)
+
+            print(f"Token = {token}")
+            token_id = tokenizer.convert_tokens_to_ids(token)
+            print(f"Token ID = {token_id}")
+            current_embeds = text_encoder.get_input_embeddings()
+            next_new_token = token_dict_size = current_embeds.weight.shape[0]
+            next_new_token += 1
+            new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
+            new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
+            new_embedding.weight[token_dict_size] = embed
+            new_embedding.cuda()
+            text_encoder.set_input_embeddings(new_embedding)
             
         except RuntimeError as e:
             print(f" (incompatible: {token}) {e}")
