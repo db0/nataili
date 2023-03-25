@@ -278,9 +278,11 @@ def load_lora_for_models(model, clip, lora_path, strength_model, strength_clip):
     key_map = model_lora_keys(model.model)
     key_map = model_lora_keys(clip, key_map)
     loaded = load_lora(lora_path, key_map)
-    new_modelpatcher = model.clone()
+    new_modelpatcher = model
+    new_modelpatcher = new_modelpatcher.cuda()
     k = new_modelpatcher.add_patches(loaded, strength_model)
-    new_clip = clip.clone()
+    new_clip = clip
+    new_clip = new_clip.cuda()
     k1 = new_clip.add_patches(loaded, strength_clip)
     k = set(k)
     k1 = set(k1)
