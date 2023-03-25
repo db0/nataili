@@ -49,6 +49,7 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
     dtype = text_encoder.get_input_embeddings().weight.dtype
     embeds.to(dtype)
     embeds.requires_grad = False
+    embeds.cuda()
 
     token = token[1 if token.startswith("<") else None:-1 if token.endswith(">") else None]
     tokens = [f"<{token}>"] if embeds.shape[0] == 1 else [f"<{token}{i}>" for i in range(embeds.shape[0])]
@@ -63,7 +64,7 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
                     sd2_clip = "SD_2.x" #"OpenCLIP-ViT/H, SD_2.x"
                     raise RuntimeError(f"Text encoder: {sd1_clip if encoder_shape[0] == 768 else sd2_clip}, embed: {sd1_clip if embed.shape[0] == 768 else sd2_clip}")
                 raise RuntimeError(f"Incompatible: embed shape {embed.shape} does not match text encoder shape {text_encoder.get_input_embeddings().weight.data[0].shape}")
-            # num_added_tokens = tokenizer.add_tokens(token)
+            num_added_tokens = tokenizer.add_tokens(token)
             # if num_added_tokens == 0:
             #     # simply attempt to add the token with a number suffix
             #     for i in range(0, 256):
@@ -74,29 +75,32 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
             #     if num_added_tokens == 0:
             #         print(f"WARNING: Unable to add token {token} to tokenizer. Too many instances? Skipping addition!")
             #         continue
-            # # resize the token embeddings
-            # text_encoder.resize_token_embeddings(len(tokenizer))
-            # # get the id for the token and assign the embed
-            # token_id = tokenizer.convert_tokens_to_ids(token)
-            # text_encoder.get_input_embeddings().weight.data[token_id] = embed
-            # text_encoder.set_input_embeddings()
-
-            print(f"Token = {token}")
-            token_id = tokenizer.convert_tokens_to_ids(token)
-            print(f"Token ID = {token_id}")
             current_embeds = text_encoder.get_input_embeddings()
-            next_new_token = token_dict_size = current_embeds.weight.shape[0]
-            next_new_token += 1
-            new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
-            new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
-            new_embedding.weight[token_dict_size] = embed
+            # resize the token embeddings
+            text_encoder.resize_token_embeddings(len(tokenizer))
+            # get the id for the token and assign the embed
+            token_id = tokenizer.convert_tokens_to_ids(token)
+            new_embedding = torch.nn.Embedding(len(tokenizer), current_embeds.weight.shape[1])
+            new_embedding.weight[:len(tokenizer)] = current_embeds.weight[:]
+            new_embedding.weight[len(tokenizer)] = embed
             text_encoder.set_input_embeddings(new_embedding)
+
+            # print(f"Token = {token}")
+            # token_id = tokenizer.convert_tokens_to_ids(token)
+            # print(f"Token ID = {token_id}")
+            # current_embeds = text_encoder.get_input_embeddings()
+            # next_new_token = token_dict_size = current_embeds.weight.shape[0]
+            # next_new_token += 1
+            # new_embedding = torch.nn.Embedding(next_new_token, current_embeds.weight.shape[1])
+            # new_embedding.weight[:token_dict_size] = current_embeds.weight[:]
+            # new_embedding.weight[token_dict_size] = embed
+            # text_encoder.set_input_embeddings(new_embedding)
             
         except RuntimeError as e:
             print(f" (incompatible: {token}) {e}")
             return
             #print_exc()
-            
+
     return ",".join(tokens)
 
 def load_learned_embed_in_clip_v2(
