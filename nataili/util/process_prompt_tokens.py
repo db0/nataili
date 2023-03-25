@@ -100,6 +100,7 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
 
     for token_name in prompt_tokens:
         print(f"Token for processing = {token_name}")
+        print(f"Model baseline = {model_baseline}")
         text_encoder = (
             model.cond_stage_model.transformer
             if model_baseline == "stable diffusion 1"
