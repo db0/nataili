@@ -36,10 +36,10 @@ def load_learned_embed_in_clip(learned_embeds_path, text_encoder, tokenizer, tok
         learned_embeds_path = os.path.splitext(learned_embeds_path)[0] + ".bin"
         torch.save(params_dict, learned_embeds_path)
         loaded_learned_embeds = torch.load(learned_embeds_path, map_location="cpu")
-        trained_token = List(loaded_learned_embeds.keys())[0]
+        trained_token = list(loaded_learned_embeds.keys())[0]
         embeds = loaded_learned_embeds[trained_token]
     elif learned_embeds_path.endswith(".bin"):
-        trained_token = List(loaded_learned_embeds.keys())[0]
+        trained_token = list(loaded_learned_embeds.keys())[0]
         embeds = loaded_learned_embeds[trained_token]
 
     # convert [768] Tensor to [1,768]
