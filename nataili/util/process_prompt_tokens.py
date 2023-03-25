@@ -139,7 +139,7 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
             elif embedding_type == "LoRA":
                 model, tokenizer = load_lora_for_models(
                     model, 
-                    tokenizer, 
+                    model.cond_stage_model, 
                     f"{os.path.join(embed_manager.path, embedding_path)}",
                     1,
                     1
