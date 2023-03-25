@@ -57,10 +57,11 @@ class EmbedsManager:
         return EmbedType, baseline
 
     def download_embedding(self, name, full_path):
-        print(f"Downloading embedding {name} to {full_path}")
+        download_location = self.all_embeds[name]["DownloadPath"]
+        print(f"Downloading embedding {name} from {download_location} to {full_path}")
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         pbar_desc = full_path.split("/")[-1]
-        r = requests.get(self.all_embeds[name]["DownloadPath"], stream=True, allow_redirects=True)
+        r = requests.get(download_location, stream=True, allow_redirects=True)
         with open(full_path, "wb") as f:
             with tqdm(
                 # all optional kwargs
