@@ -604,7 +604,7 @@ class CompVis:
                 prompt_tokens = re.findall("<([a-zA-Z0-9-]+)>", prompt)
                 if prompt_tokens:
                     process_prompt_tokens(
-                        prompt_tokens, model if control_type is None else self.control_net_model, self.concepts_dir
+                        prompt_tokens, model if control_type is None else self.control_net_model, self.model_baseline
                     )
 
             all_prompts = batch_size * n_iter * [prompt]
