@@ -38,16 +38,19 @@ jobs:
           git commit -am 'version incremented'
           git push
     - name: "🐍 Set up Python 3.10"
+      if: ${{ steps.release.outputs.version != '' }}
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
     - name: Install pypa/build
+      if: ${{ steps.release.outputs.version != '' }}
       run: >-
         python -m
         pip install
         build
         --user
     - name: "🔧 Build a binary wheel and a source tarball"
+      if: ${{ steps.release.outputs.version != '' }}
       run: >-
         python -m
         build
@@ -56,7 +59,7 @@ jobs:
         --outdir dist/
         .
     - name: "📦 Publish distribution to PyPI"
-      if: startsWith(github.ref, 'refs/tags')
+      if: ${{ steps.release.outputs.version != '' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
