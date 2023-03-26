@@ -193,10 +193,7 @@ class CompVisModelManager(BaseModelManager):
                 logger.debug("Converting model to half precision")
                 model = model.half()
                 logger.debug("Converting model.cond_stage_model.transformer to half precision")
-                if "stable diffusion 2" in self.models[model_name]["baseline"]:
-                    model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
-                else:
-                    model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
+                model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
 
         if voodoo and isinstance(model, torch.nn.Module):
             logger.debug(f"Doing voodoo on {model_name}")
