@@ -266,13 +266,11 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
     def __init__(self, arch="ViT-H-14", version="openai/clip-vit-large-patch14", device="cuda", max_length=77, freeze=True, layer="penultimate", layer_idx=None):
         super().__init__()
-        # TODO: Update this
         if os.path.exists("models/clip-vit-large-patch14"):
             self.tokenizer = CLIPTokenizer.from_pretrained("models/clip-vit-large-patch14")
         else:
             self.tokenizer = CLIPTokenizer.from_pretrained(version)
-        textmodel_json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd2_clip_config.json")
-        config = CLIPTextConfig.from_json_file(textmodel_json_config)
+        config = CLIPTextConfig.from_json_file("sd2_clip_config.json")
         self.transformer = CLIPTextModel(config)
         self.empty_tokens = [[49406] + [49407] + [0] * 75]
         if layer == "last":
