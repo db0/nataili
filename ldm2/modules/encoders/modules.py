@@ -274,16 +274,46 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
         textmodel_json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd2_clip_config.json")
         config = CLIPTextConfig.from_json_file(textmodel_json_config)
         self.transformer = CLIPTextModel(config)
-
+        self.empty_tokens = [[49406] + [49407] + [0] * 75]
+        if layer == "last":
+            pass
+        elif layer == "penultimate":
+            layer_idx = -1
+            self.clip_layer(layer_idx)
+        elif self.layer == "hidden":
+            assert layer_idx is not None
+            assert abs(layer_idx) < 24
+            self.clip_layer(layer_idx)
+        else:
+            raise NotImplementedError()
+        
         self.device = device
         self.max_length = max_length
         self.chunk_length = 75
         self.freeze()
         vocab = self.tokenizer.get_vocab()
         self.comma_token = vocab.get(',</w>', None)
-        self.id_start = self.tokenizer.bos_token_id
-        self.id_end = self.tokenizer.eos_token_id
+
+        empty = self.tokenizer('')["input_ids"]
+        self.start_token = empty[0]
+        self.end_token = empty[1]
+        self.pad_with_end = False
+        vocab = self.tokenizer.get_vocab()
+        self.inv_vocab = {v: k for k, v in vocab.items()}
+        self.max_word_length = 8
+        self.id_start = empty[0]
+        self.id_end = empty[1]
         self.id_pad = self.id_end
+
+    def clip_layer(self, layer_idx):
+        if layer_idx < 0:
+            layer_idx -= 1 #The real last layer of SD2.x clip is the penultimate one. The last one might contain garbage.
+        if abs(layer_idx) >= 24:
+            self.layer = "hidden"
+            self.layer_idx = -2
+        else:
+            self.layer = "hidden"
+            self.layer_idx = layer_idx
 
     def empty_chunk(self):
         """creates an empty PromptChunk and returns it"""
