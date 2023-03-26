@@ -264,7 +264,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
 
 class FrozenOpenCLIPEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
-    def __init__(self, arch="ViT-H-14", version="models/clip-vit-large-patch14", device="cuda", max_length=77):
+    def __init__(self, arch="ViT-H-14", version="openai/clip-vit-large-patch14", device="cuda", max_length=77, freeze=True, layer="penultimate", layer_idx=None):
         super().__init__()
         # TODO: Update this
         if os.path.exists("models/clip-vit-large-patch14"):
