@@ -1,7 +1,7 @@
 """
-This file is part of nataili ("Homepage" = "https://github.com/Sygil-Dev/nataili").
+This file is part of nataili ("Homepage" = "https://github.com/db0/nataili").
 
-Copyright 2022 hlky and Sygil-Dev
+Copyright 2022-2023 hlky. Copyright 2023 hlky and AI Horde Community
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
