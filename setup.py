@@ -10,7 +10,7 @@ with open("requirements.txt") as reqstxt:
 
 setup(
     name="nataili",
-    version="v0.2.9019",
+    version="v0.2.9020",
     description="",
     packages=find_packages(),
     install_requires=requirements,
