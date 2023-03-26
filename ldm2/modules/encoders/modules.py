@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.checkpoint import checkpoint
 
-from transformers import T5Tokenizer, T5EncoderModel, CLIPTokenizer, CLIPTextModel
+from transformers import T5Tokenizer, T5EncoderModel, CLIPTokenizer, CLIPTextModel, CLIPTextConfig
 
 import open_clip
 from ldm2.util import default, count_params
@@ -269,10 +269,12 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
         # TODO: Update this
         if os.path.exists("models/clip-vit-large-patch14"):
             self.tokenizer = CLIPTokenizer.from_pretrained("models/clip-vit-large-patch14")
-            self.transformer = CLIPTextModel.from_pretrained("models/clip-vit-large-patch14")
         else:
             self.tokenizer = CLIPTokenizer.from_pretrained(version)
-            self.transformer = CLIPTextModel.from_pretrained(version)
+        textmodel_json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd2_clip_config.json")
+        config = CLIPTextConfig.from_json_file(textmodel_json_config)
+        self.transformer = CLIPTextModel(config)
+
         self.device = device
         self.max_length = max_length
         self.chunk_length = 75
