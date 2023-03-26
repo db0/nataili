@@ -202,10 +202,7 @@ class CompVisModelManager(BaseModelManager):
             logger.debug(f"Moving model data directly to device {device}")
             model = model.to(device)
             logger.debug(f"Sending model.cond_stage_model.transformer to {device}")
-            if "stable diffusion 2" in self.models[model_name]["baseline"]:
-                model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.to(device)
-            else:
-                model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
+            model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
             logger.debug(f"Setting model.cond_stage_model.device to {device}")
             model.cond_stage_model.device = device
 

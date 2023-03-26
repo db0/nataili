@@ -103,16 +103,8 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
     for token_name in prompt_tokens:
         print(f"Token for processing = {token_name}")
         print(f"Model baseline = {model_baseline}")
-        text_encoder = (
-            model.cond_stage_model.transformer
-            if model_baseline == "stable diffusion 1"
-            else model.cond_stage_model.model.transformer
-        )
-        tokenizer = (
-            model.cond_stage_model.tokenizer
-            if model_baseline == "stable diffusion 1"
-            else open_clip.tokenizer._tokenizer
-        )
+        text_encoder = model.cond_stage_model.transformer
+        tokenizer = model.cond_stage_model.tokenizer
         print (f"Tokenizer = {tokenizer}")
 
         embed_data = embed_manager.find_embedding(token_name)
@@ -123,21 +115,12 @@ def process_prompt_tokens(prompt_tokens, model, model_baseline):
             print(f"Embedding path = {embedding_path}; Embedding type = {embedding_type}; Embedding baseline = {embedding_baseline}")
 
             if embedding_type == "Textual Inversion":
-                if model_baseline == "stable diffusion 1":
-                    new_tokens = load_learned_embed_in_clip(
-                        f"{os.path.join(embed_manager.path, embedding_path)}",
-                        text_encoder,
-                        tokenizer,
-                        token_name
-                    )
-                else:
-                    new_tokens = load_learned_embed_in_clip_v2(
-                        f"{os.path.join(embed_manager.path, embedding_path)}",
-                        model,
-                        text_encoder,
-                        tokenizer,
-                        token_name
-                    )
+                new_tokens = load_learned_embed_in_clip(
+                    f"{os.path.join(embed_manager.path, embedding_path)}",
+                    text_encoder,
+                    tokenizer,
+                    token_name
+                )
             elif embedding_type == "LoRA":
                 model, tokenizer = load_lora_for_models(
                     model, 
