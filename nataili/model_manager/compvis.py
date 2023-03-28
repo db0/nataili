@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 import open_clip
+import safetensors.torch
 import torch
 import transformers.utils.hub
 from omegaconf import OmegaConf
@@ -44,7 +45,7 @@ class CompVisModelManager(BaseModelManager):
         self.models_db_name = "stable_diffusion"
         self.models_path = self.pkg / f"{self.models_db_name}.json"
         self.remote_db = (
-            f"https://raw.githubusercontent.com/db0/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
+            f"https://raw.githubusercontent.com/ResidentChief/AI-Horde-image-model-reference/main/{self.models_db_name}.json"
         )
         self.init()
 
@@ -89,15 +90,18 @@ class CompVisModelManager(BaseModelManager):
 
     def load_model_from_config(self, model_path="", config_path="", map_location="cpu"):
         config = OmegaConf.load(config_path)
-        pl_sd = torch.load(model_path, map_location=map_location)
-        if "global_step" in pl_sd:
-            logger.info(f"Global Step: {pl_sd['global_step']}")
-        sd = pl_sd["state_dict"] if "state_dict" in pl_sd else pl_sd
+        if model_path.lower().endswith(".safetensors"):
+            sd = safetensors.torch.load_file(model_path, device=map_location)
+        else:
+            sd = torch.load(model_path, map_location=map_location)
+            if "global_step" in sd:
+                logger.info(f"Global Step: {sd['global_step']}")
+            sd = sd["state_dict"] if "state_dict" in sd else sd
 
         sd1_clip_weight = "cond_stage_model.transformer.text_model.embeddings.token_embedding.weight"
         sd2_clip_weight = "cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight"
         clip_is_included_into_sd = sd1_clip_weight in sd or sd2_clip_weight in sd
-
+        
         model = None
         try:
             with DisableInitialization(disable_clip=clip_is_included_into_sd):
@@ -110,11 +114,59 @@ class CompVisModelManager(BaseModelManager):
             model = instantiate_from_config(config.model)
 
         m, u = model.load_state_dict(sd, strict=False)
+        k = list(sd.keys())
+        for x in k:
+            # print(x)
+            if x.startswith("cond_stage_model.transformer.") and not x.startswith("cond_stage_model.transformer.text_model."):
+                y = x.replace("cond_stage_model.transformer.", "cond_stage_model.transformer.text_model.")
+                sd[y] = sd.pop(x)
+
+        if 'cond_stage_model.transformer.text_model.embeddings.position_ids' in sd:
+            ids = sd['cond_stage_model.transformer.text_model.embeddings.position_ids']
+            if ids.dtype == torch.float32:
+                sd['cond_stage_model.transformer.text_model.embeddings.position_ids'] = ids.round()
+
+        keys_to_replace = {
+            "cond_stage_model.model.positional_embedding": "cond_stage_model.transformer.text_model.embeddings.position_embedding.weight",
+            "cond_stage_model.model.token_embedding.weight": "cond_stage_model.transformer.text_model.embeddings.token_embedding.weight",
+            "cond_stage_model.model.ln_final.weight": "cond_stage_model.transformer.text_model.final_layer_norm.weight",
+            "cond_stage_model.model.ln_final.bias": "cond_stage_model.transformer.text_model.final_layer_norm.bias",
+        }
+
+        for x in keys_to_replace:
+            if x in sd:
+                sd[keys_to_replace[x]] = sd.pop(x)
+
+        resblock_to_replace = {
+            "ln_1": "layer_norm1",
+            "ln_2": "layer_norm2",
+            "mlp.c_fc": "mlp.fc1",
+            "mlp.c_proj": "mlp.fc2",
+            "attn.out_proj": "self_attn.out_proj",
+        }
+
+        for resblock in range(24):
+            for x in resblock_to_replace:
+                for y in ["weight", "bias"]:
+                    k = "cond_stage_model.model.transformer.resblocks.{}.{}.{}".format(resblock, x, y)
+                    k_to = "cond_stage_model.transformer.text_model.encoder.layers.{}.{}.{}".format(resblock, resblock_to_replace[x], y)
+                    if k in sd:
+                        sd[k_to] = sd.pop(k)
+
+            for y in ["weight", "bias"]:
+                k_from = "cond_stage_model.model.transformer.resblocks.{}.attn.in_proj_{}".format(resblock, y)
+                if k_from in sd:
+                    weights = sd.pop(k_from)
+                    for x in range(3):
+                        p = ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj"]
+                        k_to = "cond_stage_model.transformer.text_model.encoder.layers.{}.{}.{}".format(resblock, p[x], y)
+                        sd[k_to] = weights[1024*x:1024*(x + 1)]
+                        
         model = model.eval()
         for m in model.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                 m._orig_padding_mode = m.padding_mode
-        del pl_sd, sd, m, u
+        del sd, m, u
         return model
 
     def load_custom(self, ckpt_path, config_path, model_name=None, replace=False):
@@ -189,10 +241,7 @@ class CompVisModelManager(BaseModelManager):
                 logger.debug("Converting model to half precision")
                 model = model.half()
                 logger.debug("Converting model.cond_stage_model.transformer to half precision")
-                if "stable diffusion 2" in self.models[model_name]["baseline"]:
-                    model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
-                else:
-                    model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
+                model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
 
         if voodoo and isinstance(model, torch.nn.Module):
             logger.debug(f"Doing voodoo on {model_name}")
@@ -201,10 +250,7 @@ class CompVisModelManager(BaseModelManager):
             logger.debug(f"Moving model data directly to device {device}")
             model = model.to(device)
             logger.debug(f"Sending model.cond_stage_model.transformer to {device}")
-            if "stable diffusion 2" in self.models[model_name]["baseline"]:
-                model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.to(device)
-            else:
-                model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
+            model.cond_stage_model.transformer = model.cond_stage_model.transformer.to(device)
             logger.debug(f"Setting model.cond_stage_model.device to {device}")
             model.cond_stage_model.device = device
 

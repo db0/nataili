@@ -9,7 +9,7 @@ python-slugify
 einops
 facexlib
 kornia
-opencv-python-headless
+opencv-contrib-python-headless
 basicsr
 gfpgan
 realesrgan
