@@ -612,7 +612,20 @@ class CompVis:
             all_seeds = [seed + x for x in range(len(all_prompts))]
             if control_type is None:
                 if inpainting:
-                    samples_ddim = inpaint(sampler, init_img, init_mask, prompt, seed, cfg_scale, ddim_steps, n_iter, width, height, negprompt, clip_skip)
+                    samples_ddim = inpaint(
+                        sampler,
+                        init_img,
+                        init_mask,
+                        prompt,
+                        seed,
+                        cfg_scale,
+                        ddim_steps,
+                        n_iter,
+                        width,
+                        height,
+                        negprompt,
+                        clip_skip,
+                    )
                     prompts = all_prompts
                     seeds = all_seeds
                 elif self.model_name != "pix2pix":
@@ -758,7 +771,7 @@ class CompVis:
                                 logger.debug(
                                     f"[Low VRAM] hi-res fix -  before sampling - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                                 )
-                else: # self.model_name is pix2pix
+                else:  # self.model_name is pix2pix
                     logger.debug(
                         f"[Low VRAM] Pix2pix start - model.device = {model.device}, model.cond_stage_model.device = {model.cond_stage_model.device}, model.first_stage_model.device = {model.first_stage_model.device}"
                     )
@@ -1026,19 +1039,15 @@ class CompVis:
         torch.cuda.empty_cache()
         return
 
-def make_batch_sd(
-        image,
-        mask,
-        txt,
-        device,
-        num_samples=1):
+
+def make_batch_sd(image, mask, txt, device, num_samples=1):
     image = np.array(image.convert("RGB"))
-    image = image[None].transpose(0,3,1,2)
-    image = torch.from_numpy(image).to(dtype=torch.float16)/127.5-1.0
+    image = image[None].transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image).to(dtype=torch.float16) / 127.5 - 1.0
 
     mask = np.array(mask.convert("L"))
-    mask = mask.astype(np.float16)/255.0
-    mask = mask[None,None]
+    mask = mask.astype(np.float16) / 255.0
+    mask = mask[None, None]
     mask[mask < 0.5] = 0
     mask[mask >= 0.5] = 1
     mask = torch.from_numpy(mask)
@@ -1046,19 +1055,22 @@ def make_batch_sd(
     masked_image = image * (mask < 0.5)
 
     batch = {
-            "image": einops.repeat(image.to(device=device), "1 ... -> n ...", n=num_samples),
-            "txt": num_samples * [txt],
-            "mask": einops.repeat(mask.to(device=device), "1 ... -> n ...", n=num_samples),
-            "masked_image": einops.repeat(masked_image.to(device=device), "1 ... -> n ...", n=num_samples),
-            }
+        "image": einops.repeat(image.to(device=device), "1 ... -> n ...", n=num_samples),
+        "txt": num_samples * [txt],
+        "mask": einops.repeat(mask.to(device=device), "1 ... -> n ...", n=num_samples),
+        "masked_image": einops.repeat(masked_image.to(device=device), "1 ... -> n ...", n=num_samples),
+    }
     return batch
 
-def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, W, H, negative_prompt, clip_skip) -> Image:
+
+def inpaint(
+    sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, W, H, negative_prompt, clip_skip
+) -> Image:
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = sampler.model
 
     prng = np.random.RandomState(seed)
-    start_code = prng.randn(num_samples, 4, H//8, W//8)
+    start_code = prng.randn(num_samples, 4, H // 8, W // 8)
     start_code = torch.from_numpy(start_code).to(device=device, dtype=torch.float32)
 
     with torch.no_grad():
@@ -1071,7 +1083,7 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, 
             for ck in model.concat_keys:
                 cc = batch[ck].float()
                 if ck != model.masked_image_key:
-                    bchw = [num_samples, 4, H//8, W//8]
+                    bchw = [num_samples, 4, H // 8, W // 8]
                     cc = torch.nn.functional.interpolate(cc, size=bchw[-2:])
                 else:
                     cc = model.get_first_stage_encoding(model.encode_first_stage(cc))
@@ -1079,23 +1091,23 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, 
             c_cat = torch.cat(c_cat, dim=1)
 
             # cond
-            cond={"c_concat": [c_cat], "c_crossattn": [c]}
+            cond = {"c_concat": [c_cat], "c_crossattn": [c]}
 
             # uncond cond
             uc_cross = model.get_unconditional_conditioning(num_samples, negative_prompt, clip_skip)
             uc_full = {"c_concat": [c_cat], "c_crossattn": [uc_cross]}
 
-            shape = [model.channels, H//8, W//8]
+            shape = [model.channels, H // 8, W // 8]
             samples_ddim, _ = sampler.sample(
-                    ddim_steps,
-                    num_samples,
-                    shape,
-                    cond,
-                    verbose=False,
-                    eta=1.0,
-                    unconditional_guidance_scale=scale,
-                    unconditional_conditioning=uc_full,
-                    x_T=start_code,
+                ddim_steps,
+                num_samples,
+                shape,
+                cond,
+                verbose=False,
+                eta=1.0,
+                unconditional_guidance_scale=scale,
+                unconditional_conditioning=uc_full,
+                x_T=start_code,
             )
             return samples_ddim
 
