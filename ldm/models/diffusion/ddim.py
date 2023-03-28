@@ -197,9 +197,12 @@ class DDIMSampler(object):
                 c_in = dict()
                 for k in c:
                     if isinstance(c[k], list):
-                        c_in[k] = [torch.cat([
-                            unconditional_conditioning[k][i],
-                            c[k][i]]) for i in range(len(c[k]))]
+                        c_in[k] = list()
+                        for i in range(len(c[k])):
+                            c_i, uc_i = fix_mismatched_tensors(
+                                c[k][i], unconditional_conditioning[k][i], self.model
+                            )
+                            c_in[k].append(torch.cat([uc_i, c_i]))
                     else:
                         c_in[k] = torch.cat([
                                 unconditional_conditioning[k],
@@ -214,7 +217,7 @@ class DDIMSampler(object):
                     c, unconditional_conditioning = fix_mismatched_tensors(
                         c, unconditional_conditioning, self.model
                     )
-                c.cuda()
+                c = c.cuda()
                 uc = unconditional_conditioning.cuda()
                 c_in = torch.cat([uc, c])
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
