@@ -84,8 +84,6 @@ class CompVisModelManager(BaseModelManager):
                 cpu_only=cpu_only,
                 voodoo=voodoo,
             )
-            logger.init(f"{model_name}", status="tomesd patching")
-            tomesd.apply_patch(self.loaded_models[model_name]["model"], ratio=0.5)
             toc = time.time()
             logger.init_ok(f"{model_name}: {round(toc-tic,2)} seconds", status="Loaded")
             return True
@@ -196,7 +194,8 @@ class CompVisModelManager(BaseModelManager):
                     model.cond_stage_model.model.transformer = model.cond_stage_model.model.transformer.half()
                 else:
                     model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
-
+        logger.init(f"{model_name}", status="tomesd patching")
+        tomesd.apply_patch(model, ratio=0.5)
         if voodoo and isinstance(model, torch.nn.Module):
             logger.debug(f"Doing voodoo on {model_name}")
             model = push_model_to_plasma(model, ckpt_path)
