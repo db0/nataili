@@ -85,7 +85,7 @@ class CompVisModelManager(BaseModelManager):
                 voodoo=voodoo,
             )
             logger.init(f"{model_name}", status="tomesd patching")
-            tomesd.apply_patch(self.loaded_models[model_name], ratio=0.5)
+            tomesd.apply_patch(self.loaded_models[model_name]["model"], ratio=0.5)
             toc = time.time()
             logger.init_ok(f"{model_name}: {round(toc-tic,2)} seconds", status="Loaded")
             return True
