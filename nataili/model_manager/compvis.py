@@ -195,7 +195,7 @@ class CompVisModelManager(BaseModelManager):
                 else:
                     model.cond_stage_model.transformer = model.cond_stage_model.transformer.half()
         logger.init(f"{model_name}", status="tomesd patching")
-        tomesd.apply_patch(model, ratio=0.5)
+        tomesd.apply_patch(model, ratio=0.6)
         if voodoo and isinstance(model, torch.nn.Module):
             logger.debug(f"Doing voodoo on {model_name}")
             model = push_model_to_plasma(model, ckpt_path)
