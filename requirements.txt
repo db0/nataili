@@ -1,4 +1,5 @@
-torch
+torch==2.0.0
+torchvision=0.15.1
 taming-transformers-rom1504
 k-diffusion
 omegaconf
