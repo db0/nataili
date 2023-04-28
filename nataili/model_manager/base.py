@@ -84,7 +84,18 @@ class BaseModelManager:
             logger.init("Model Reference", status="Downloading")
             response = requests.get(self.remote_db)
             logger.init_ok("Model Reference", status="OK")
-            models = response.json()
+            temp_models = response.json()
+            models = {}
+            # XXX filter out safetensors models for compvis
+            for model_name, model_data in temp_models.items():
+                skip = False
+                if model_data.get("type") == "ckpt" and "stable diffusion" in model_data.get("baseline", ""):
+                    downloads = model_data.get("config", {}).get("download", [])
+                    for download in downloads:
+                        if download.get("file_name").lower().endswith(".safetensors"):
+                            skip = True
+                if not skip:
+                    models[model_name] = model_data
             return models
         except Exception as e:
             logger.init_err("Model Reference", status=f"Download failed: {e}")
