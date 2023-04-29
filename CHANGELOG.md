@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.3.4](https://github.com/db0/nataili/tree/v0.3.4) (2023-04-29)
+
+[Full Changelog](https://github.com/db0/nataili/compare/v0.3.3...v0.3.4)
+
+**Merged pull requests:**
+
+- readme [\#39](https://github.com/db0/nataili/pull/39) ([db0](https://github.com/db0))
+- fix: ignore compvis safetensor models in the mm db [\#38](https://github.com/db0/nataili/pull/38) ([jug-dev](https://github.com/jug-dev))
+
 ## [v0.3.3](https://github.com/db0/nataili/tree/v0.3.3) (2023-04-02)
 
 [Full Changelog](https://github.com/db0/nataili/compare/v0.3.2...v0.3.3)
