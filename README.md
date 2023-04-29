@@ -5,9 +5,11 @@
 
 ![GitHub license](https://img.shields.io/github/license/db0/nataili)
 
-**!! NOTICE: Currently this package is looking for a lead developer !!**
+**!! NOTICE: This package is obsolete !!**
 
-Our only ML Develeloper has dropped out and the reamining team does not have the required skills to add new features. **If you see the value in this package, we urge you to contact us if you're interested in picking it up**. You can reach us [in discord](https://discord.gg/3DxrhksKzn) or in this repository issues.
+Please switch to using [hordelib](https://pypi.org/project/hordelib/) which is based on ComfyUI.
+
+---
 
 Nataili is a Python library that provides tools for building multimodal AI applications. With its modular design, Nataili makes it easy to use only the tools you need to build custom AI solutions.
 
