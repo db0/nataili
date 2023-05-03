@@ -66,6 +66,15 @@ class CompVisModelManager(BaseModelManager):
         if model_name not in self.models:
             logger.error(f"{model_name} not found")
             return False
+        try:
+            download_file_name = self.models[model_name]["download"][0]["file_name"]
+            if ".safetensors" in download_file_name:
+                logger.error(f"{model_name} is not supported by this worker version.")
+                logger.error("You can except support for this model (and others) in the comfy-backend release soon.")
+                return False
+        except Exception as e:
+            logger.debug(f'self.models[model_name]["download"][0]["file_name"] failed: {e}')
+
         if model_name not in self.available_models:
             logger.error(f"{model_name} not available")
             self.download_model(model_name)
